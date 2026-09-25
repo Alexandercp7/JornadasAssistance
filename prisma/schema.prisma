@@ -1,0 +1,109 @@
+// Prisma Schema for MJVC Attendance System
+// Compatible with MySQL (local development) and Supabase / PostgreSQL (production)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql" // Switch to "postgresql" when deploying to Supabase
+  url      = env("DATABASE_URL")
+}
+
+enum RoleType {
+  PREESCUELA
+  ESCUELA
+  SUPERADMIN
+}
+
+enum AttendanceStatus {
+  EMPTY
+  PRESENT
+  LATE
+  ABSENT
+}
+
+model Group {
+  id          String     @id @default(cuid())
+  slug        RoleType   @unique
+  name        String     @db.VarChar(100)
+  customTitle String     @db.VarChar(150)
+  pin         String     @db.VarChar(10)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  members     Member[]
+  sessions    Session[]
+  auditLogs   AuditLog[]
+
+  @@map("groups")
+}
+
+model Member {
+  id           String       @id @default(cuid())
+  groupId      String
+  name         String       @db.VarChar(150)
+  isAuxiliar   Boolean      @default(false)
+  avatarUrl    String?      @db.LongText
+  roleSubtitle String       @default("Integrantes") @db.VarChar(150)
+  qrToken      String       @unique @db.VarChar(64)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  group        Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  attendances  Attendance[]
+  auditLogs    AuditLog[]
+
+  @@index([groupId])
+  @@index([qrToken])
+  @@map("members")
+}
+
+model Session {
+  id          String       @id @default(cuid())
+  groupId     String
+  label       String       @db.VarChar(50) // Ej. "12/Oct"
+  sessionDate DateTime     @db.Date
+  createdAt   DateTime     @default(now())
+
+  group       Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  attendances Attendance[]
+
+  @@index([groupId, sessionDate])
+  @@map("sessions")
+}
+
+model Attendance {
+  id        String           @id @default(cuid())
+  memberId  String
+  sessionId String
+  status    AttendanceStatus @default(EMPTY)
+  updatedAt DateTime         @updatedAt
+
+  member    Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  session   Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, sessionId])
+  @@index([memberId])
+  @@index([sessionId])
+  @@map("attendances")
+}
+
+model AuditLog {
+  id              String           @id @default(cuid())
+  groupId         String
+  memberId        String?
+  memberName      String           @db.VarChar(150)
+  sessionName     String           @db.VarChar(100)
+  status          AttendanceStatus
+  coordinatorRole RoleType
+  registeredAt    DateTime         @default(now())
+
+  group           Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  member          Member?          @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([groupId])
+  @@index([registeredAt])
+  @@map("audit_logs")
+}
+
