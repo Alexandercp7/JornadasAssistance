@@ -105,6 +105,8 @@ interface AttendanceStoreState {
   }>
 }
 
+let activeFetchGroupId: string | null = null
+
 export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
   members: [],
   sessions: [],
@@ -113,6 +115,9 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
   error: null,
 
   fetchGroupData: async (groupId: string) => {
+    // Si ya hay una petición activa para este grupo, evitar llamadas duplicadas
+    if (activeFetchGroupId === groupId) return
+    activeFetchGroupId = groupId
     set({ isLoading: true, error: null })
     try {
       const [membersRes, sessionsRes] = await Promise.all([
@@ -129,7 +134,6 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
           sessions: Array.isArray(sessionsData) ? sessionsData : [],
           isLoading: false,
         })
-        get().fetchAuditLogs(groupId)
         return
       } else {
         set({ error: 'Error al consultar datos de la base de datos', isLoading: false })
@@ -137,9 +141,9 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     } catch (e) {
       console.error('Error al conectar con la base de datos:', e)
       set({ error: 'No se pudo conectar con la base de datos', isLoading: false })
+    } finally {
+      activeFetchGroupId = null
     }
-
-    get().fetchAuditLogs(groupId)
   },
 
   resetGroupData: () => {
@@ -318,13 +322,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         body: JSON.stringify({ memberId, sessionId, status, coordinatorRole, justification }),
       })
 
-      if (res.ok) {
-        // Recargar bitácora real de la base de datos
-        const member = get().members.find((m) => m.id === memberId)
-        if (member) {
-          get().fetchAuditLogs(member.groupId)
-        }
-      } else {
+      if (!res.ok) {
         const errorData = await res.json()
         console.error('Error del servidor:', errorData)
         // Podríamos revertir el estado optimista si falla

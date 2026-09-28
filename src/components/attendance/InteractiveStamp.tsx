@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { memo } from 'react'
 
 export type AttendanceStatus = 'EMPTY' | 'PRESENT' | 'LATE' | 'LATE_JUSTIFIED' | 'ABSENT' | 'ABSENT_JUSTIFIED'
 
@@ -10,19 +10,18 @@ interface InteractiveStampProps {
   size?: 'sm' | 'md' | 'lg'
 }
 
-export function InteractiveStamp({ initialStatus = 'EMPTY', onStatusChange, size = 'md' }: InteractiveStampProps) {
-  const [status, setStatus] = useState<AttendanceStatus>(initialStatus)
-
-  useEffect(() => {
-    setStatus(initialStatus)
-  }, [initialStatus])
+export const InteractiveStamp = memo(function InteractiveStamp({
+  initialStatus = 'EMPTY',
+  onStatusChange,
+  size = 'md',
+}: InteractiveStampProps) {
+  const status = initialStatus
 
   const cycleStatus = () => {
     const sequence: AttendanceStatus[] = ['EMPTY', 'PRESENT', 'LATE', 'LATE_JUSTIFIED', 'ABSENT', 'ABSENT_JUSTIFIED']
     const currentIndex = sequence.indexOf(status)
     const nextStatus = sequence[(currentIndex + 1) % sequence.length]
 
-    setStatus(nextStatus)
     if (onStatusChange) onStatusChange(nextStatus)
   }
 
@@ -45,7 +44,7 @@ export function InteractiveStamp({ initialStatus = 'EMPTY', onStatusChange, size
     <button
       type="button"
       onClick={cycleStatus}
-      className={`${sizeClasses} rounded-full flex items-center justify-center transition-all duration-150 outline-none select-none cursor-pointer active:scale-90 font-manrope font-extrabold text-[11px]
+      className={`${sizeClasses} rounded-full flex items-center justify-center transition-all duration-100 outline-none select-none cursor-pointer active:scale-90 font-manrope font-extrabold text-[11px]
         ${status === 'EMPTY' ? 'bg-[#FAF2E5] border-2 border-[#E5D5BC] hover:border-[#DE9927]/60' : ''}
         ${status === 'PRESENT' ? 'bg-[#1F6B5C] border-2 border-[#1F6B5C] text-[#F3E7C8] shadow-sm' : ''}
         ${status === 'LATE' ? 'bg-[#D87532] border-2 border-[#D87532] text-[#F3E7C8] shadow-sm' : ''}
@@ -62,4 +61,4 @@ export function InteractiveStamp({ initialStatus = 'EMPTY', onStatusChange, size
       {status === 'ABSENT_JUSTIFIED' && <span className="font-manrope font-extrabold text-[10px] text-[#F3E7C8] leading-none">FJ</span>}
     </button>
   )
-}
+})

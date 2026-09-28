@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
@@ -34,8 +34,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isEditing, setIsEditing] = useState(false)
   const [tempTitle, setTempTitle] = useState('')
   const [isQrScannerOpen, setIsQrScannerOpen] = useState(false)
+  const fetchedGroupIdRef = useRef<string | null>(null)
 
-  // Verificación de sesión segura (Resuelve el problema de recarga F5)
+  // Verificación de sesión segura (Resuelve el problema de recarga F5 sin duplicar llamadas)
   useEffect(() => {
     let isMounted = true
 
@@ -43,7 +44,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (_hasHydrated && isAuthenticated && groupId) {
         if (isMounted) {
           setTempTitle(customTitle || groupName)
-          fetchGroupData(groupId)
+          if (fetchedGroupIdRef.current !== groupId) {
+            fetchedGroupIdRef.current = groupId
+            fetchGroupData(groupId)
+          }
           setIsVerifying(false)
         }
         return
@@ -57,7 +61,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             authState.groupId ||
             (authState.activeRole === 'ESCUELA' ? 'grp_escuela' : 'grp_preescuela')
           setTempTitle(authState.customTitle || authState.groupName)
-          fetchGroupData(currentGroupId)
+          if (fetchedGroupIdRef.current !== currentGroupId) {
+            fetchedGroupIdRef.current = currentGroupId
+            fetchGroupData(currentGroupId)
+          }
           setIsVerifying(false)
         } else {
           router.push('/')
@@ -70,14 +77,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => {
       isMounted = false
     }
-  }, [_hasHydrated, isAuthenticated, groupId, router, checkSession, fetchGroupData, customTitle, groupName])
+  }, [_hasHydrated, isAuthenticated, groupId, router, checkSession, fetchGroupData])
 
   // Pantalla de carga mientras se verifica la sesión en F5
   if (isVerifying) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#F6ECD9] text-[#0D356A] space-y-4">
         <div className="relative w-16 h-16 rounded-full border-2 border-[#DE9927] p-1 bg-white shadow-md animate-pulse">
-          <Image src="/logo.png" alt="Logo MJVC" fill sizes="64px" className="object-cover rounded-full" />
+          <Image src="/logo.png" alt="Logo MJVC" fill priority sizes="64px" className="object-cover rounded-full" />
         </div>
         <div className="flex items-center gap-2 text-[#0D356A] text-sm font-bold">
           <Loader2 className="w-4 h-4 animate-spin text-[#DE9927]" />
@@ -113,7 +120,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex items-center gap-3 min-w-0">
               {/* Crest Logo Circular */}
               <div className="w-9 h-9 sm:w-10 sm:h-10 relative rounded-full overflow-hidden bg-white/10 border-2 border-[#DE9927] p-0.5 shrink-0 shadow-sm">
-                <Image src="/logo.png" alt="Logo MJVC" fill sizes="(max-width: 640px) 36px, 40px" className="object-cover rounded-full" />
+                <Image src="/logo.png" alt="Logo MJVC" fill priority sizes="(max-width: 640px) 36px, 40px" className="object-cover rounded-full" />
               </div>
 
               {/* Título y Badge de Sesión alineados estrictamente a la derecha */}

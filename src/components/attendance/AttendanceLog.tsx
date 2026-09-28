@@ -1,12 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search } from 'lucide-react'
 import { useAttendanceStore } from '@/store/useAttendanceStore'
+import { useAuthStore } from '@/store/useAuthStore'
 
 export function AttendanceLog() {
-  const { auditLogs } = useAttendanceStore()
+  const { auditLogs, fetchAuditLogs } = useAttendanceStore()
+  const { groupId, activeRole } = useAuthStore()
   const [searchTerm, setSearchTerm] = useState('')
+
+  const currentGroupId =
+    groupId || (activeRole === 'ESCUELA' ? 'grp_escuela' : 'grp_preescuela')
+
+  useEffect(() => {
+    fetchAuditLogs(currentGroupId)
+  }, [currentGroupId, fetchAuditLogs])
 
   // Filtrado reactivo en tiempo real
   const filteredLogs = auditLogs.filter((log) =>
@@ -16,7 +25,7 @@ export function AttendanceLog() {
 
   return (
     <div className="space-y-4">
-      
+
       {/* Encabezado estilo Mockup */}
       <div className="pt-1">
         <h2 className="text-2xl font-black text-[#0D356A] tracking-tight">
