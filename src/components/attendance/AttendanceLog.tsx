@@ -60,18 +60,28 @@ export function AttendanceLog() {
               {/* Estado y Hora en Tiempo Real */}
               <div className="flex flex-col items-end gap-1 shrink-0">
                 {log.status === 'PRESENT' && (
-                  <span className="text-xs font-bold text-[#196E52] uppercase tracking-wide">
+                  <span className="text-xs font-bold text-[#1F6B5C] uppercase tracking-wide">
                     ✓ PRESENTE
                   </span>
                 )}
                 {log.status === 'LATE' && (
-                  <span className="text-xs font-bold text-[#C86A1D] uppercase tracking-wide">
+                  <span className="text-xs font-bold text-[#D87532] uppercase tracking-wide">
                     R RETARDO
                   </span>
                 )}
+                {log.status === 'LATE_JUSTIFIED' && (
+                  <span className="text-xs font-bold text-[#C87D2F] uppercase tracking-wide">
+                    RJ RETARDO JUST.
+                  </span>
+                )}
                 {log.status === 'ABSENT' && (
-                  <span className="text-xs font-bold text-[#7A1E2C] uppercase tracking-wide">
+                  <span className="text-xs font-bold text-[#7A2634] uppercase tracking-wide">
                     ✗ FALTA
+                  </span>
+                )}
+                {log.status === 'ABSENT_JUSTIFIED' && (
+                  <span className="text-xs font-bold text-[#9E3B4D] uppercase tracking-wide">
+                    FJ FALTA JUST.
                   </span>
                 )}
 

@@ -1,7 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&family=Manrope:wght@200..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..900&family=Google+Sans+Flex:opsz,wght@6..144,1..1000&family=Manrope:wght@200..800&display=swap');
 @import "tailwindcss";
 
 @theme {
+  --font-fraunces: 'Fraunces', Georgia, serif;
   --font-google-sans: 'Google Sans Flex', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-manrope: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
@@ -17,9 +18,11 @@
   --color-accent-gold-light: #FCEFD5;
   --color-accent-gold-foreground: #FFFFFF;
 
-  --color-status-present: #196E52;
-  --color-status-late: #C86A1D;
-  --color-status-absent: #7A1E2C;
+  --color-status-present: #1F6B5C;
+  --color-status-late: #D87532;
+  --color-status-late-justified: #C87D2F;
+  --color-status-absent: #7A2634;
+  --color-status-absent-justified: #9E3B4D;
 
   --color-card: #FFFDF9;
   --color-card-warm: #F4E8D3;
@@ -34,6 +37,10 @@ body {
   color: var(--color-foreground);
   font-family: var(--font-manrope), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-tap-highlight-color: transparent;
+}
+
+@utility font-fraunces {
+  font-family: 'Fraunces', Georgia, serif;
 }
 
 @utility font-google-sans {

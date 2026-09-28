@@ -23,6 +23,7 @@
     "clsx": "^2.1.0",
     "html-to-image": "^1.11.13",
     "jose": "^6.2.12",
+    "jsqr": "^1.4.0",
     "lucide-react": "^0.368.0",
     "next": "latest",
     "prisma": "5.11.0",

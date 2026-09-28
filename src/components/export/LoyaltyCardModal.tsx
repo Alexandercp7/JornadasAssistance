@@ -143,15 +143,21 @@ export function LoyaltyCardModal({
                         ? 'bg-accent-gold border-accent-gold text-primary shadow-[0_0_12px_rgba(227,163,54,0.4)]'
                         : stamp.status === 'LATE'
                         ? 'bg-status-late border-status-late text-white'
+                        : stamp.status === 'LATE_JUSTIFIED'
+                        ? 'bg-status-late-justified border-status-late-justified text-white'
                         : stamp.status === 'ABSENT'
                         ? 'bg-status-absent border-status-absent text-white'
+                        : stamp.status === 'ABSENT_JUSTIFIED'
+                        ? 'bg-status-absent-justified border-status-absent-justified text-white'
                         : 'bg-primary-foreground/5 border-primary-foreground/20 text-primary-foreground/30'
                     }`}
                   >
                     <span className="text-[8px] font-bold opacity-80 mb-0.5">{stamp.sessionLabel}</span>
                     {stamp.status === 'PRESENT' && <Check className="w-4 h-4 stroke-[3]" />}
                     {stamp.status === 'LATE' && <span className="font-bold text-xs">R</span>}
+                    {stamp.status === 'LATE_JUSTIFIED' && <span className="font-bold text-[10px]">RJ</span>}
                     {stamp.status === 'ABSENT' && <span className="font-bold text-xs">✗</span>}
+                    {stamp.status === 'ABSENT_JUSTIFIED' && <span className="font-bold text-[10px]">FJ</span>}
                     {stamp.status === 'EMPTY' && <div className="w-2 h-2 rounded-full border border-current" />}
                   </div>
                 ))}

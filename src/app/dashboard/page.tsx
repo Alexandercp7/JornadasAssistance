@@ -26,21 +26,23 @@ export default function DashboardPage() {
       members.forEach((m) => {
         const att = m.attendances?.find((a) => a.sessionId === activeSession.id)
         if (att?.status === 'PRESENT') activePresent++
-        else if (att?.status === 'LATE') activeLate++
-        else if (att?.status === 'ABSENT') activeAbsent++
+        else if (att?.status === 'LATE' || att?.status === 'LATE_JUSTIFIED') activeLate++
+        else if (att?.status === 'ABSENT' || att?.status === 'ABSENT_JUSTIFIED') activeAbsent++
       })
     }
 
     members.forEach((m) => {
-      let pCount = 0, totalS = 0
+      let pPoints = 0, totalS = 0
       m.attendances?.forEach((a) => {
-        if (a.status === 'PRESENT') { totalPointsAll += 1; totalEvaluatedAll += 1; pCount += 1 } 
-        else if (a.status === 'LATE') { totalPointsAll += 0.5; totalEvaluatedAll += 1; pCount += 0.5 } 
+        if (a.status === 'PRESENT') { totalPointsAll += 1; totalEvaluatedAll += 1; pPoints += 1 } 
+        else if (a.status === 'LATE') { totalPointsAll += 0.5; totalEvaluatedAll += 1; pPoints += 0.5 } 
+        else if (a.status === 'LATE_JUSTIFIED') { totalPointsAll += 0.75; totalEvaluatedAll += 1; pPoints += 0.75 } 
+        else if (a.status === 'ABSENT_JUSTIFIED') { totalPointsAll += 0.25; totalEvaluatedAll += 1; pPoints += 0.25 } 
         else if (a.status === 'ABSENT') { totalEvaluatedAll += 1 }
         totalS++
       })
       
-      const r = totalS > 0 ? (pCount / totalS) * 100 : 0
+      const r = totalS > 0 ? (pPoints / totalS) * 100 : 0
       if (r > maxRate) { maxRate = r; topMemberName = m.name }
     })
 
@@ -71,6 +73,8 @@ export default function DashboardPage() {
             <ArrowLeft className="w-4 h-4" /> Volver al Resumen
           </button>
 
+          <AttendanceTable />
+
           <div className="grid grid-cols-2 gap-3">
             <button onClick={() => setActiveView('bitacora')} className="bg-[#FAF3E7] border border-[#DE9927] hover:bg-[#F3E6D0] text-[#0D356A] font-bold p-3 rounded-2xl shadow-sm flex flex-col items-center justify-center gap-1.5 transition-colors">
               <History className="w-5 h-5 text-[#DE9927]" /> 
@@ -81,7 +85,6 @@ export default function DashboardPage() {
               <span className="text-xs text-center">Reportes y Exportación</span>
             </button>
           </div>
-          <AttendanceTable />
         </div>
       )}
 

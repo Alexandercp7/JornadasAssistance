@@ -10,7 +10,7 @@ EXCEPTION
 END $$;
 
 DO $$ BEGIN
-    CREATE TYPE "AttendanceStatus" AS ENUM ('EMPTY', 'PRESENT', 'LATE', 'ABSENT');
+    CREATE TYPE "AttendanceStatus" AS ENUM ('EMPTY', 'PRESENT', 'LATE', 'LATE_JUSTIFIED', 'ABSENT', 'ABSENT_JUSTIFIED');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;

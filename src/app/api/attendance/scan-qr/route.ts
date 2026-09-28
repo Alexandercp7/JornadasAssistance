@@ -13,41 +13,75 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Token QR es requerido' }, { status: 400 })
     }
 
-    // 1. Buscar al integrante por su token QR
-    const member = await prisma.member.findUnique({
-      where: { qrToken: qrToken.trim() },
+    // 1. Limpieza y normalización de token (por si viene de URL, JSON o con espacios)
+    let cleanedToken = String(qrToken).trim()
+    if (cleanedToken.startsWith('{') && cleanedToken.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(cleanedToken)
+        cleanedToken = parsed.qrToken || parsed.token || parsed.id || cleanedToken
+      } catch {
+        // Ignorar si no es JSON válido
+      }
+    }
+    if (cleanedToken.includes('?') || cleanedToken.includes('=')) {
+      try {
+        const urlObj = new URL(cleanedToken.startsWith('http') ? cleanedToken : `http://dummy.com/${cleanedToken}`)
+        const paramToken = urlObj.searchParams.get('qrToken') || urlObj.searchParams.get('token')
+        if (paramToken) cleanedToken = paramToken
+      } catch {
+        // Mantener token como string
+      }
+    }
+
+    // 2. Buscar al integrante por su token QR o por su ID
+    const member = await prisma.member.findFirst({
+      where: {
+        OR: [
+          { qrToken: cleanedToken },
+          { id: cleanedToken },
+        ],
+      },
       include: { group: true },
     })
 
     if (!member) {
-      return NextResponse.json({ error: 'Token QR no válido o integrante no encontrado' }, { status: 404 })
       return NextResponse.json(
         { error: 'Token QR no válido o integrante no encontrado' },
         { status: 404 },
       )
     }
 
-    // 2. Determinar la sesión de asistencia
+    // 3. Determinar la sesión de asistencia
     let targetSessionId = sessionId
 
     if (!targetSessionId) {
       // Buscar la sesión más reciente del grupo del miembro
       const latestSession = await prisma.session.findFirst({
         where: { groupId: member.groupId },
-        orderBy: { sessionDate: 'desc' },
+        orderBy: [{ sessionDate: 'desc' }, { createdAt: 'desc' }],
       })
 
       if (!latestSession) {
-        return NextResponse.json({ error: 'No hay sesiones registradas para este grupo' }, { status: 400 })
-        return NextResponse.json(
-          { error: 'No hay sesiones registradas para este grupo' },
-          { status: 400 },
-        )
+        // Si aún no existen sesiones para este grupo, creamos una de hoy automáticamente
+        const today = new Date()
+        const day = today.getDate().toString().padStart(2, '0')
+        const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+        const label = `${day}/${months[today.getMonth()]}`
+
+        const newSession = await prisma.session.create({
+          data: {
+            groupId: member.groupId,
+            label,
+            sessionDate: today,
+          },
+        })
+        targetSessionId = newSession.id
+      } else {
+        targetSessionId = latestSession.id
       }
-      targetSessionId = latestSession.id
     }
 
-    // 3. Obtener la sesión para la bitácora
+    // 4. Obtener la sesión para la bitácora
     const session = await prisma.session.findUnique({
       where: { id: targetSessionId },
     })
@@ -56,8 +90,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Sesión no encontrada' }, { status: 404 })
     }
 
-    // 4. Marcar como PRESENT (Asistencia confirmada)
-    // 4. Verificar si ya tiene un estado justificado — NO sobreescribir con PRESENT
+    // 5. Verificar si ya tiene un estado justificado — NO sobreescribir con PRESENT
     const existing = await prisma.attendance.findUnique({
       where: {
         memberId_sessionId: {
@@ -80,6 +113,7 @@ export async function POST(req: Request) {
           name: member.name,
           isAuxiliar: member.isAuxiliar,
           roleSubtitle: member.roleSubtitle,
+          groupId: member.groupId,
           groupName: member.group.name,
         },
         session: { id: session.id, label: session.label },
@@ -87,7 +121,9 @@ export async function POST(req: Request) {
       })
     }
 
-    // 5. Marcar como PRESENT (Asistencia confirmada por QR)
+    const wasAlreadyPresent = existing?.status === AttendanceStatus.PRESENT
+
+    // 6. Marcar como PRESENT (Asistencia confirmada por QR)
     const attendance = await prisma.attendance.upsert({
       where: {
         memberId_sessionId: {
@@ -106,8 +142,7 @@ export async function POST(req: Request) {
       },
     })
 
-    // 5. Registrar en la bitácora de auditoría
-    // 6. Registrar en la bitácora de auditoría
+    // 7. Registrar en la bitácora de auditoría
     await prisma.auditLog.create({
       data: {
         groupId: member.groupId,
@@ -123,12 +158,15 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `¡Asistencia confirmada para ${member.name}!`,
+      message: wasAlreadyPresent
+        ? `¡${member.name} ya estaba registrado/a como Presente!`
+        : `¡Asistencia confirmada para ${member.name}!`,
       member: {
         id: member.id,
         name: member.name,
         isAuxiliar: member.isAuxiliar,
         roleSubtitle: member.roleSubtitle,
+        groupId: member.groupId,
         groupName: member.group.name,
       },
       session: {

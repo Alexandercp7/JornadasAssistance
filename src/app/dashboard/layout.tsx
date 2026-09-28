@@ -40,7 +40,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     let isMounted = true
 
     const verify = async () => {
-      // 1. Si ya está autenticado e hidratado, cargar datos
       if (_hasHydrated && isAuthenticated && groupId) {
         if (isMounted) {
           setTempTitle(customTitle || groupName)
@@ -50,7 +49,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         return
       }
 
-      // 2. Verificar sesión mediante JWT HttpOnly en el servidor
       const isSessionValid = await checkSession()
       if (isMounted) {
         if (isSessionValid) {
@@ -98,93 +96,89 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push('/')
   }
 
-  const handleExportExcel = () => {
-    const url = `/api/export/excel?groupId=${groupId || 'grp_preescuela'}`
-    window.open(url, '_blank')
-  }
-
   const formattedRole = activeRole === 'PREESCUELA' ? 'Coord. Preescuela' : activeRole === 'ESCUELA' ? 'Coord. Escuela' : activeRole || 'Coordinación'
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F6ECD9] text-[#0D356A]">
 
-      {/* Header Superior estilo Mockup (Fondo azul profundo, crest redondo, título dorado) */}
+      {/* Header Superior estilo Mockup */}
       <header className="bg-[#0D356A] text-white sticky top-0 z-40 shadow-md">
-        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 py-3">
-          <div className="flex items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5">
+          <div className="flex flex-col gap-3">
 
-            {/* Lado izquierdo: Logo + Título MJVC + Badge de sesión */}
-            <div className="flex items-center gap-2.5 min-w-0">
+            {/* FILA 1: Logo, MJVC y Sesión en la misma línea */}
+            <div className="flex items-center gap-3 min-w-0">
               {/* Crest Logo Circular */}
               <div className="w-9 h-9 sm:w-10 sm:h-10 relative rounded-full overflow-hidden bg-white/10 border-2 border-[#DE9927] p-0.5 shrink-0 shadow-sm">
                 <Image src="/logo.png" alt="Logo MJVC" fill className="object-cover rounded-full" />
               </div>
 
-              <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-google-sans font-bold text-[18px] tracking-tight text-[#DE9927] leading-tight">
-                    MJVC EA's Jesús
-                  </span>
-                  <span className="font-manrope font-semibold text-[10px] text-[#F3E7C8] bg-white/10 px-2 py-0.5 rounded border border-white/15">
-                    [Sesión: {formattedRole}]
-                  </span>
-                </div>
-
-                {/* Subtítulo / Apodo editable con lápiz */}
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  {isEditing ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="text"
-                        value={tempTitle}
-                        onChange={(e) => setTempTitle(e.target.value)}
-                        className="h-6 font-manrope font-medium text-[13px] bg-white/20 border border-[#DE9927] rounded px-1.5 text-[#F3E7C8] outline-none w-48 sm:w-64 placeholder-[#F3E7C8]/50"
-                        autoFocus
-                        onBlur={handleSaveTitle}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
-                      />
-                      <button onClick={handleSaveTitle} className="p-0.5 text-[#DE9927] hover:text-white">
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => setIsEditing(true)}
-                      className="flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-opacity text-[#F3E7C8]"
-                      title="Clic para editar nombre del grupo"
-                    >
-                      <Pencil className="w-3 h-3 text-[#DE9927] shrink-0" />
-                      <span className="font-manrope font-medium text-[13px] text-[#F3E7C8] truncate max-w-[200px] sm:max-w-[320px]">
-                        Grupo: {customTitle || groupName}
-                      </span>
-                    </div>
-                  )}
-                </div>
+              {/* Título y Badge de Sesión alineados estrictamente a la derecha */}
+              <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                <span className="font-google-sans font-bold text-[18px] sm:text-[20px] tracking-tight text-[#DE9927] leading-tight truncate">
+                  MJVC EA's Jesús
+                </span>
+                <span className="font-manrope font-semibold text-[10px] text-[#F3E7C8] bg-white/10 px-2 py-0.5 rounded border border-white/15 whitespace-nowrap shrink-0">
+                  [Sesión: {formattedRole}]
+                </span>
               </div>
             </div>
 
-            {/* Acciones del Header */}
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* FILA 2: Grupo Editable a la izquierda, Cámara y Salir a la derecha */}
+            <div className="flex items-center justify-between gap-3 sm:pl-[52px]">
 
-              {/* Botón Escanear Pase QR */}
-              <button
-                onClick={() => setIsQrScannerOpen(true)}
-                className="bg-[#DE9927] hover:bg-[#C8841B] text-white font-bold text-xs px-2.5 sm:px-3 py-1.5 rounded-xl shadow flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95"
-                title="Escanear Pase QR"
-              >
-                <Camera className="w-4 h-4" />
-                <span className="hidden sm:inline">Escanear</span>
-              </button>
+              {/* Edición del Grupo */}
+              <div className="flex items-center min-w-0">
+                {isEditing ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={tempTitle}
+                      onChange={(e) => setTempTitle(e.target.value)}
+                      className="h-8 font-manrope font-medium text-sm bg-white/10 border border-[#DE9927] rounded-lg px-2.5 text-[#F3E7C8] outline-none w-44 sm:w-64 placeholder-[#F3E7C8]/50 focus:bg-white/20 transition-colors"
+                      autoFocus
+                      onBlur={handleSaveTitle}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
+                    />
+                    <button onClick={handleSaveTitle} className="p-1.5 bg-[#DE9927]/20 rounded-lg text-[#DE9927] hover:bg-[#DE9927] hover:text-white transition-colors">
+                      <Check className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => setIsEditing(true)}
+                    className="flex items-center gap-2 cursor-pointer hover:bg-white/5 py-1.5 px-2 -ml-2 rounded-lg transition-colors text-[#F3E7C8]"
+                    title="Clic para editar nombre del grupo"
+                  >
+                    <Pencil className="w-3.5 h-3.5 text-[#DE9927] shrink-0" />
+                    <span className="font-manrope font-medium text-sm text-[#F3E7C8] truncate max-w-[180px] sm:max-w-[350px]">
+                      Grupo: {customTitle || groupName}
+                    </span>
+                  </div>
+                )}
+              </div>
 
-              {/* Botón Salir */}
-              <button
-                onClick={handleLogout}
-                className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-                title="Cerrar Sesión"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+              {/* Botones de Acción Derecha: Escanear QR y Salir */}
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                {/* Botón Escanear Pase QR */}
+                <button
+                  onClick={() => setIsQrScannerOpen(true)}
+                  className="bg-[#DE9927] hover:bg-[#C8841B] text-white font-bold text-xs px-3 py-2 rounded-xl shadow-md flex items-center gap-2 transition-transform cursor-pointer active:scale-95"
+                  title="Escanear Pase QR"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span className="hidden sm:inline">Escanear</span>
+                </button>
 
+                {/* Botón Salir */}
+                <button
+                  onClick={handleLogout}
+                  className="p-2 bg-white/10 text-white/80 hover:text-white hover:bg-white/20 rounded-xl transition-colors cursor-pointer"
+                  title="Cerrar Sesión"
+                >
+                  <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              </div>
             </div>
 
           </div>

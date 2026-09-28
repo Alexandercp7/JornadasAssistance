@@ -91,7 +91,14 @@ interface AttendanceStoreState {
     qrToken: string,
     sessionId?: string,
     coordinatorRole?: string
-  ) => Promise<{ success: boolean; message: string; memberName?: string }>
+  ) => Promise<{
+    success: boolean
+    message: string
+    memberName?: string
+    memberRole?: string
+    isAuxiliar?: boolean
+    sessionLabel?: string
+  }>
 }
 
 export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
@@ -303,19 +310,55 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         body: JSON.stringify({ qrToken, sessionId, coordinatorRole }),
       })
 
-      if (res.ok) {
-        const data = await res.json()
-        if (data.member && data.session) {
-          // Refrescar datos reales del grupo desde la base de datos
-          const currentMember = get().members.find((m) => m.qrToken === qrToken)
-          if (currentMember) {
-            get().fetchGroupData(currentMember.groupId)
-          }
+      const data = await res.json()
+
+      if (res.ok && data.success !== false) {
+        // Actualización optimista de estado para reflejar el estado inmediatamente en UI
+        if (data.attendance && data.member && data.session) {
+          set((state) => ({
+            members: state.members.map((m) => {
+              if (m.id !== data.member.id) return m
+              const existingAttIndex = m.attendances.findIndex((a) => a.sessionId === data.session.id)
+              let updatedAttendances = [...m.attendances]
+              if (existingAttIndex >= 0) {
+                updatedAttendances[existingAttIndex] = {
+                  ...updatedAttendances[existingAttIndex],
+                  status: 'PRESENT',
+                  justification: null,
+                }
+              } else {
+                updatedAttendances.push({
+                  id: data.attendance.id || `att_${Date.now()}`,
+                  memberId: m.id,
+                  sessionId: data.session.id,
+                  status: 'PRESENT',
+                  justification: null,
+                })
+              }
+              return { ...m, attendances: updatedAttendances }
+            }),
+          }))
         }
-        return { success: true, message: data.message, memberName: data.member?.name }
+
+        const targetGroupId =
+          data.member?.groupId ||
+          get().members.find((m) => m.qrToken === qrToken || m.id === data.member?.id)?.groupId
+
+        if (targetGroupId) {
+          get().fetchGroupData(targetGroupId)
+          get().fetchAuditLogs(targetGroupId)
+        }
+
+        return {
+          success: true,
+          message: data.message,
+          memberName: data.member?.name,
+          memberRole: data.member?.roleSubtitle,
+          isAuxiliar: data.member?.isAuxiliar,
+          sessionLabel: data.session?.label,
+        }
       } else {
-        const errorData = await res.json()
-        return { success: false, message: errorData.error || 'Código QR no reconocido' }
+        return { success: false, message: data.error || data.message || 'Código QR no reconocido' }
       }
     } catch (e) {
       console.error('Error al procesar escaneo QR en base de datos:', e)
