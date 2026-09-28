@@ -82,7 +82,7 @@ export function SummaryView({ onNavigate, metrics }: SummaryViewProps) {
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-white/10 border border-[#DE9927] p-1 flex items-center justify-center shrink-0">
             <div className="relative w-full h-full">
-              <Image src="/vector.png" alt="Crest" fill className="object-contain" />
+              <Image src="/vector.png" alt="Crest" fill sizes="40px" className="object-contain" />
             </div>
           </div>
           <div className="min-w-0">

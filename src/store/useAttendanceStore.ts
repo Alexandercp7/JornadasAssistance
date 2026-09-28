@@ -220,7 +220,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     if (!member) return false
 
     const newIsAuxiliar = !member.isAuxiliar
-    const newSubtitle = newIsAuxiliar ? 'Auxiliares y Guías' : 'Integrantes'
+    const newSubtitle = newIsAuxiliar ? 'Auxiliares' : 'Integrantes'
 
     return get().updateMember(id, {
       isAuxiliar: newIsAuxiliar,

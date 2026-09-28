@@ -21,7 +21,7 @@ export function QrPassModal({ isOpen, onClose, member }: QrPassModalProps) {
   const handleDownload = async () => {
     if (passRef.current) {
       try {
-        const dataUrl = await toPng(passRef.current, { cacheBust: true, pixelRatio: 3 })
+        const dataUrl = await toPng(passRef.current, { cacheBust: true, pixelRatio: 3, skipFonts: true })
         const link = document.createElement('a')
         link.download = `Pase_QR_${member.name.replace(/\s+/g, '_')}.png`
         link.href = dataUrl
@@ -58,7 +58,7 @@ export function QrPassModal({ isOpen, onClose, member }: QrPassModalProps) {
             <div className="space-y-1 z-10">
               <span className="text-[10px] font-black tracking-widest text-accent-gold uppercase">MJVC EA's Jesús</span>
               <h4 className="text-lg font-bold text-primary-foreground leading-tight">{member.name}</h4>
-              <p className="text-xs text-primary-foreground/70">{member.roleSubtitle}</p>
+              <p className="text-xs text-primary-foreground/70">{member.isAuxiliar ? 'Auxiliares' : member.roleSubtitle}</p>
             </div>
 
             {/* Código QR */}

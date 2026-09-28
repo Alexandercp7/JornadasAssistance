@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import Image from 'next/image'
 import { toPng } from 'html-to-image'
-import { X, Download, Star, Check, Sparkles, User } from 'lucide-react'
+import { X, Download, Star, Check, Sparkles, User, Edit2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MemberItem, SessionItem } from '@/store/useAttendanceStore'
 
@@ -14,6 +14,7 @@ interface LoyaltyCardModalProps {
   sessions: SessionItem[]
   groupTitle?: string
   onOpenQr?: () => void
+  onEditMember?: () => void
 }
 
 export function LoyaltyCardModal({
@@ -23,6 +24,7 @@ export function LoyaltyCardModal({
   sessions,
   groupTitle = 'Preescuela',
   onOpenQr,
+  onEditMember,
 }: LoyaltyCardModalProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [isExporting, setIsExporting] = useState(false)
@@ -34,7 +36,7 @@ export function LoyaltyCardModal({
     if (cardRef.current) {
       try {
         setIsExporting(true)
-        const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 })
+        const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3, skipFonts: true })
         const link = document.createElement('a')
         link.download = `LoyaltyCard_${member.name.replace(/\s+/g, '_')}.png`
         link.href = dataUrl
@@ -47,8 +49,11 @@ export function LoyaltyCardModal({
     }
   }
 
-  // Obtener los sellos para las sesiones disponibles
-  const stamps = sessions.map((session) => {
+  // Obtener las últimas 8 sesiones (o todas si hay 8 o menos)
+  const recentSessions = sessions.length > 8 ? sessions.slice(-8) : sessions
+
+  // Obtener los sellos para las sesiones más recientes
+  const stamps = recentSessions.map((session) => {
     const att = member.attendances?.find((a) => a.sessionId === session.id)
     return {
       sessionLabel: session.label,
@@ -95,7 +100,9 @@ export function LoyaltyCardModal({
             <div className="flex items-center justify-between border-b border-primary-foreground/15 pb-3 z-10">
               <div>
                 <h3 className="text-lg font-black tracking-tight text-accent-gold">MJVC EA's Jesús</h3>
-                <p className="text-[10px] text-primary-foreground/80 font-medium">{member.roleSubtitle}</p>
+                <p className="text-[10px] text-primary-foreground/80 font-medium">
+                  {member.isAuxiliar ? 'Auxiliares' : member.roleSubtitle}
+                </p>
               </div>
 
               {/* === LOGO INTERACTIVO PARA ABRIR QR === */}
@@ -104,24 +111,35 @@ export function LoyaltyCardModal({
                 title="Generar Pase QR"
                 className="w-10 h-10 relative rounded-full border-2 border-accent-gold bg-primary-foreground p-0.5 shadow-md shrink-0 cursor-pointer hover:scale-105 transition-transform active:scale-95"
               >
-                <Image src="/logo.png" alt="Logo MJVC" fill className="object-cover rounded-full" />
+                <Image src="/logo.png" alt="Logo MJVC" fill sizes="40px" className="object-cover rounded-full" />
               </div>
             </div>
 
             {/* Identificación del Integrante */}
             <div className="flex items-center gap-4 my-auto py-2 z-10">
-              <div className="w-16 h-16 rounded-full border-2 border-accent-gold overflow-hidden bg-primary-foreground/10 relative shadow-inner shrink-0 flex items-center justify-center">
+              <div
+                onClick={onEditMember}
+                title="Haga clic para editar"
+                className={`w-16 h-16 rounded-full border-2 border-accent-gold overflow-hidden bg-primary-foreground/10 relative shadow-inner shrink-0 flex items-center justify-center ${
+                  onEditMember ? 'cursor-pointer hover:scale-105 hover:border-white transition-all group/avatar' : ''
+                }`}
+              >
                 {member.avatarUrl ? (
                   <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" />
                 ) : (
                   <User className="w-8 h-8 text-primary-foreground/50" />
+                )}
+                {!isExporting && onEditMember && (
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity rounded-full">
+                    <Edit2 className="w-5 h-5 text-white" />
+                  </div>
                 )}
               </div>
               <div className="space-y-1">
                 <h4 className="font-bold text-lg text-primary-foreground leading-snug">{member.name}</h4>
                 {member.isAuxiliar && (
                   <span className="inline-flex items-center gap-1 text-[10px] font-black bg-accent-gold text-primary px-2.5 py-0.5 rounded-full shadow-md">
-                    <Star className="w-3 h-3 fill-primary text-primary" /> AUXILIAR DESTACADO
+                    <Star className="w-3 h-3 fill-primary text-primary" /> AUXILIARES
                   </span>
                 )}
               </div>

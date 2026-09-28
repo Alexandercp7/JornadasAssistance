@@ -256,7 +256,7 @@ export function AttendanceTable() {
                           <div className="flex items-center gap-1 font-manrope font-normal text-[10px]">
                             {member.isAuxiliar ? (
                               <span className="text-[#DE9927] flex items-center gap-0.5">
-                                ⭐ {member.roleSubtitle.includes('Guía') ? 'Guía' : 'Auxiliar'}
+                                ⭐ Auxiliar
                               </span>
                             ) : (
                               <span className="text-[#0D356A]/60">
@@ -345,8 +345,13 @@ export function AttendanceTable() {
         sessions={groupSessions}
         groupTitle={customTitle || (activeRole === 'ESCUELA' ? 'Escuela' : 'Preescuela')}
         onOpenQr={() => {
-          setSelectedMemberForCard(null);
           setSelectedMemberForQr(selectedMemberForCard);
+          setSelectedMemberForCard(null);
+        }}
+        onEditMember={() => {
+          setMemberToEdit(selectedMemberForCard);
+          setSelectedMemberForCard(null);
+          setIsMemberModalOpen(true);
         }}
       />
 

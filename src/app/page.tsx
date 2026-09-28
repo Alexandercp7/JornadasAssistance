@@ -89,7 +89,7 @@ export default function LoginPage() {
               {/* Logo y Encabezado */}
               <div className="text-center flex flex-col items-center mb-8">
                 <div className="relative w-24 h-24 mb-4 rounded-full shadow-[0_10px_25px_rgba(14,56,122,0.25)] border-2 border-accent-gold p-1 bg-white">
-                  <Image src="/logo.png" alt="Logo MJVC" fill className="object-cover rounded-full" priority />
+                  <Image src="/logo.png" alt="Logo MJVC" fill sizes="96px" className="object-cover rounded-full" priority />
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-black text-primary tracking-tight">MJVC EA's Jesús</h1>
                 <p className="text-xs text-accent-gold font-bold tracking-widest mt-1">SISTEMA DE ASISTENCIA PRIVADO</p>

@@ -31,7 +31,7 @@ export function MemberModal({
     if (memberToEdit) {
       setName(memberToEdit.name)
       setIsAuxiliar(memberToEdit.isAuxiliar)
-      setRoleSubtitle(memberToEdit.roleSubtitle || (memberToEdit.isAuxiliar ? 'Auxiliares y Guías' : 'Integrantes'))
+      setRoleSubtitle(memberToEdit.roleSubtitle || (memberToEdit.isAuxiliar ? 'Auxiliares' : 'Integrantes'))
       setAvatarUrl(memberToEdit.avatarUrl || null)
     } else {
       setName('')
@@ -46,7 +46,7 @@ export function MemberModal({
   const handleAuxiliarToggle = (checked: boolean) => {
     setIsAuxiliar(checked)
     if (checked) {
-      setRoleSubtitle(`Auxiliares y Guías - ${groupTitle}`)
+      setRoleSubtitle(`Auxiliares - ${groupTitle}`)
     } else {
       setRoleSubtitle(`Integrantes - ${groupTitle}`)
     }
@@ -69,7 +69,7 @@ export function MemberModal({
     onSave({
       name: name.trim(),
       isAuxiliar,
-      roleSubtitle: roleSubtitle.trim() || (isAuxiliar ? 'Auxiliares y Guías' : 'Integrantes'),
+      roleSubtitle: roleSubtitle.trim() || (isAuxiliar ? 'Auxiliares' : 'Integrantes'),
       avatarUrl,
     })
     onClose()
@@ -82,7 +82,7 @@ export function MemberModal({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-primary/5">
           <h3 className="font-bold text-lg text-primary">
-            {memberToEdit ? 'Editar Integrante' : 'Nuevo Integrante'}
+            {memberToEdit ? (isAuxiliar ? 'Editar Auxiliar' : 'Editar Integrante') : 'Nuevo Integrante'}
           </h3>
           <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
             <X className="w-5 h-5" />
@@ -145,7 +145,7 @@ export function MemberModal({
             <div className="flex items-center gap-2.5">
               <Star className={`w-5 h-5 ${isAuxiliar ? 'fill-accent-gold text-accent-gold' : 'text-primary/40'}`} />
               <div>
-                <p className="text-sm font-bold text-primary">Distintivo de Guía / Auxiliar</p>
+                <p className="text-sm font-bold text-primary">Distintivo de Auxiliar</p>
                 <p className="text-xs text-primary/60">Resalta con insignia dorada y genera pase QR</p>
               </div>
             </div>
@@ -164,7 +164,7 @@ export function MemberModal({
               type="text"
               value={roleSubtitle}
               onChange={(e) => setRoleSubtitle(e.target.value)}
-              placeholder="Ej: Auxiliares y Guías - Preescuela"
+              placeholder="Ej: Auxiliares - Preescuela"
               className="w-full h-10 px-3 rounded-lg border border-primary/20 bg-background text-sm text-foreground outline-none focus:border-accent-gold focus:ring-1 focus:ring-accent-gold transition-all"
             />
           </div>
