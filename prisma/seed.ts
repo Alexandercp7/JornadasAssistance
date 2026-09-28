@@ -151,7 +151,7 @@ async function main() {
   }
 
   // 4. Asistencias
-  const attendancesData = [
+  const attendancesData: Array<{ memberId: string; sessionId: string; status: AttendanceStatus }> = [
     { memberId: m1.id, sessionId: s1.id, status: AttendanceStatus.PRESENT },
     { memberId: m1.id, sessionId: s2.id, status: AttendanceStatus.PRESENT },
     { memberId: m1.id, sessionId: s3.id, status: AttendanceStatus.LATE },
@@ -178,7 +178,7 @@ async function main() {
     const mem = createdExtraMembers[idx]
     for (let sIdx = 0; sIdx < sessionsList.length; sIdx++) {
       const sess = sessionsList[sIdx]
-      let status = AttendanceStatus.PRESENT
+      let status: AttendanceStatus = AttendanceStatus.PRESENT
       if ((idx + sIdx) % 7 === 0) status = AttendanceStatus.LATE
       else if ((idx + sIdx) % 9 === 0) status = AttendanceStatus.LATE_JUSTIFIED
       else if ((idx + sIdx) % 11 === 0) status = AttendanceStatus.ABSENT

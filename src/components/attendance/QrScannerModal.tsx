@@ -52,6 +52,7 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
   // Referencias DOM y procesamiento
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
   const animFrameRef = useRef<number | null>(null)
   const lastScanTimeRef = useRef<number>(0)
   const cooldownRef = useRef<{ token: string; time: number } | null>(null)
@@ -135,11 +136,18 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
       animFrameRef.current = null
     }
 
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream
-      stream.getTracks().forEach((track) => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
         track.stop()
       })
+      streamRef.current = null
+    }
+
+    if (videoRef.current) {
+      if (videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream
+        stream.getTracks().forEach((track) => track.stop())
+      }
       videoRef.current.srcObject = null
     }
 
@@ -266,10 +274,32 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
         audio: false,
       })
 
+      streamRef.current = stream
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        await videoRef.current.play()
-        setCameraActive(true)
+        videoRef.current.setAttribute('playsinline', 'true')
+        videoRef.current.setAttribute('autoplay', 'true')
+        videoRef.current.muted = true
+
+        const playVideo = async () => {
+          try {
+            await videoRef.current?.play()
+          } catch (e) {
+            console.warn('Error al llamar video.play():', e)
+          } finally {
+            setCameraActive(true)
+            if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+            animFrameRef.current = requestAnimationFrame(scanLoop)
+          }
+        }
+
+        videoRef.current.onloadedmetadata = () => {
+          playVideo()
+        }
+
+        // Intento directo también
+        playVideo()
 
         // Verificar soporte para linterna
         const track = stream.getVideoTracks()[0]
@@ -277,16 +307,13 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
           const capabilities = track.getCapabilities() as { torch?: boolean }
           setTorchSupported(!!capabilities.torch)
         }
-
-        // Iniciar bucle de escaneo
-        animFrameRef.current = requestAnimationFrame(scanLoop)
       }
     } catch (err: unknown) {
       console.warn('Error al iniciar cámara:', err)
       const errorMsg =
         err instanceof Error && err.name === 'NotAllowedError'
           ? 'Permiso denegado. Permite el acceso a la cámara en tu navegador.'
-          : 'No se pudo acceder a la cámara. Usa la opción de subir imagen o simular.'
+          : 'No se pudo acceder a la cámara. Usa la opción de ingresar token manual.'
       setCameraError(errorMsg)
       setCameraActive(false)
     }
@@ -420,16 +447,20 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
 
           {/* Visor de Cámara con Marco de Escáner y Animación Láser */}
           <div className="w-full aspect-square max-w-[260px] bg-[#091A30] rounded-3xl relative overflow-hidden border border-[#0D356A] shadow-inner flex items-center justify-center">
-            {cameraActive ? (
-              <video
-                ref={videoRef}
-                className="w-full h-full object-cover"
-                playsInline
-                muted
-                autoPlay
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center p-4 text-center text-white/70 space-y-2">
+            {/* El elemento video SIEMPRE debe estar en el DOM para que videoRef.current no sea null */}
+            <video
+              ref={videoRef}
+              className={`w-full h-full object-cover transition-opacity duration-300 ${
+                cameraActive ? 'opacity-100' : 'opacity-0 absolute inset-0'
+              }`}
+              playsInline
+              muted
+              autoPlay
+            />
+
+            {/* Pantalla de carga o error mientras la cámara se inicializa */}
+            {!cameraActive && (
+              <div className="flex flex-col items-center justify-center p-4 text-center text-white/70 space-y-2 z-10">
                 {cameraError ? (
                   <>
                     <AlertCircle className="w-10 h-10 text-amber-400" />
