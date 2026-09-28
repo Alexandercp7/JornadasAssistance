@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 
-export type AttendanceStatus = 'EMPTY' | 'PRESENT' | 'LATE' | 'ABSENT'
+export type AttendanceStatus =
+  | 'EMPTY'
+  | 'PRESENT'
+  | 'LATE'
+  | 'LATE_JUSTIFIED'
+  | 'ABSENT'
+  | 'ABSENT_JUSTIFIED'
 
 export interface SessionItem {
   id: string
@@ -14,6 +20,7 @@ export interface AttendanceItem {
   memberId: string
   sessionId: string
   status: AttendanceStatus
+  justification?: string | null
 }
 
 export interface MemberItem {
@@ -32,6 +39,7 @@ export interface AuditLogItem {
   name: string
   session: string
   status: AttendanceStatus
+  justification?: string | null
   timestamp: string
   date?: string
   coordinatorRole: string
@@ -74,7 +82,8 @@ interface AttendanceStoreState {
     memberId: string,
     sessionId: string,
     status: AttendanceStatus,
-    coordinatorRole?: string
+    coordinatorRole?: string,
+    justification?: string
   ) => Promise<void>
 
   // Escaneo QR
@@ -238,7 +247,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     return false
   },
 
-  markAttendance: async (memberId, sessionId, status, coordinatorRole = 'PREESCUELA') => {
+  markAttendance: async (memberId, sessionId, status, coordinatorRole = 'PREESCUELA', justification) => {
     // 1. Actualización optimista en el estado
     set((state) => ({
       members: state.members.map((m) => {
@@ -249,12 +258,12 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
 
         if (existingAtt) {
           newAttendances = m.attendances.map((a) =>
-            a.sessionId === sessionId ? { ...a, status } : a
+            a.sessionId === sessionId ? { ...a, status, justification } : a
           )
         } else {
           newAttendances = [
             ...m.attendances,
-            { id: `att_${Date.now()}`, memberId, sessionId, status },
+            { id: `att_${Date.now()}`, memberId, sessionId, status, justification },
           ]
         }
 
@@ -267,7 +276,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       const res = await fetch('/api/attendance/mark', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ memberId, sessionId, status, coordinatorRole }),
+        body: JSON.stringify({ memberId, sessionId, status, coordinatorRole, justification }),
       })
 
       if (res.ok) {
@@ -276,6 +285,10 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         if (member) {
           get().fetchAuditLogs(member.groupId)
         }
+      } else {
+        const errorData = await res.json()
+        console.error('Error del servidor:', errorData)
+        // Podríamos revertir el estado optimista si falla
       }
     } catch (e) {
       console.error('Error al guardar asistencia en MySQL:', e)

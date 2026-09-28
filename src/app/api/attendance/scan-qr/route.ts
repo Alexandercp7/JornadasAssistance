@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma'
 import { AttendanceStatus, RoleType } from '@prisma/client'
 
 // POST /api/attendance/scan-qr
+// El QR siempre marca PRESENT. Para estados justificados usar /api/attendance/mark
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -20,6 +21,10 @@ export async function POST(req: Request) {
 
     if (!member) {
       return NextResponse.json({ error: 'Token QR no válido o integrante no encontrado' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Token QR no válido o integrante no encontrado' },
+        { status: 404 },
+      )
     }
 
     // 2. Determinar la sesión de asistencia
@@ -34,6 +39,10 @@ export async function POST(req: Request) {
 
       if (!latestSession) {
         return NextResponse.json({ error: 'No hay sesiones registradas para este grupo' }, { status: 400 })
+        return NextResponse.json(
+          { error: 'No hay sesiones registradas para este grupo' },
+          { status: 400 },
+        )
       }
       targetSessionId = latestSession.id
     }
@@ -48,6 +57,37 @@ export async function POST(req: Request) {
     }
 
     // 4. Marcar como PRESENT (Asistencia confirmada)
+    // 4. Verificar si ya tiene un estado justificado — NO sobreescribir con PRESENT
+    const existing = await prisma.attendance.findUnique({
+      where: {
+        memberId_sessionId: {
+          memberId: member.id,
+          sessionId: targetSessionId,
+        },
+      },
+    })
+
+    const isAlreadyJustified =
+      existing?.status === AttendanceStatus.LATE_JUSTIFIED ||
+      existing?.status === AttendanceStatus.ABSENT_JUSTIFIED
+
+    if (isAlreadyJustified) {
+      return NextResponse.json({
+        success: false,
+        message: `${member.name} ya tiene un estado justificado (${existing!.status}). Edítalo manualmente si es necesario.`,
+        member: {
+          id: member.id,
+          name: member.name,
+          isAuxiliar: member.isAuxiliar,
+          roleSubtitle: member.roleSubtitle,
+          groupName: member.group.name,
+        },
+        session: { id: session.id, label: session.label },
+        attendance: existing,
+      })
+    }
+
+    // 5. Marcar como PRESENT (Asistencia confirmada por QR)
     const attendance = await prisma.attendance.upsert({
       where: {
         memberId_sessionId: {
@@ -57,6 +97,7 @@ export async function POST(req: Request) {
       },
       update: {
         status: AttendanceStatus.PRESENT,
+        justification: null,
       },
       create: {
         memberId: member.id,
@@ -66,6 +107,7 @@ export async function POST(req: Request) {
     })
 
     // 5. Registrar en la bitácora de auditoría
+    // 6. Registrar en la bitácora de auditoría
     await prisma.auditLog.create({
       data: {
         groupId: member.groupId,
@@ -73,6 +115,7 @@ export async function POST(req: Request) {
         memberName: member.name,
         sessionName: `${session.label} ${member.group.customTitle}`,
         status: AttendanceStatus.PRESENT,
+        justification: null,
         coordinatorRole: (coordinatorRole as RoleType) || (member.group.slug as RoleType),
         registeredAt: new Date(),
       },

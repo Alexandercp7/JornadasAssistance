@@ -1,0 +1,81 @@
+services:
+  # ─────────────────────────────
+  #  Base de datos MySQL
+  # ─────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: mjvc_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mjvc_root_pass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mjvc_attendance}
+      MYSQL_USER: ${MYSQL_USER:-mjvc_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-mjvc_pass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-mjvc_root_pass}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - mjvc_net
+
+  # ─────────────────────────────
+  #  Migraciones + Seed (run-once)
+  # ─────────────────────────────
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: deps         # sólo necesitamos node_modules + prisma
+    container_name: mjvc_migrate
+    restart: "no"
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-mjvc_user}:${MYSQL_PASSWORD:-mjvc_pass}@db:3306/${MYSQL_DATABASE:-mjvc_attendance}
+    command: >
+      sh -c "
+        npx prisma migrate deploy &&
+        npx tsx prisma/seed.ts
+      "
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - mjvc_net
+
+  # ─────────────────────────────
+  #  Aplicación Next.js
+  # ─────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DATABASE_URL: mysql://${MYSQL_USER:-mjvc_user}:${MYSQL_PASSWORD:-mjvc_pass}@db:3306/${MYSQL_DATABASE:-mjvc_attendance}
+    container_name: mjvc_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-mjvc_user}:${MYSQL_PASSWORD:-mjvc_pass}@db:3306/${MYSQL_DATABASE:-mjvc_attendance}
+      JWT_SECRET: ${JWT_SECRET:-mjvc_ea_jesus_super_secure_jwt_secret_key_2026}
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-MJVC EA's Jesús}
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - mjvc_net
+
+volumes:
+  mysql_data:
+
+networks:
+  mjvc_net:
+    driver: bridge

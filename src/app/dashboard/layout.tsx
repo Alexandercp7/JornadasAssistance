@@ -7,11 +7,9 @@ import {
   LogOut,
   Pencil,
   Camera,
-  FileSpreadsheet,
   Loader2,
   Check,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useAttendanceStore } from '@/store/useAttendanceStore'
 import { QrScannerModal } from '@/components/attendance/QrScannerModal'
@@ -109,12 +107,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F6ECD9] text-[#0D356A]">
-      
+
       {/* Header Superior estilo Mockup (Fondo azul profundo, crest redondo, título dorado) */}
       <header className="bg-[#0D356A] text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-7xl mx-auto px-3.5 sm:px-6 py-3">
           <div className="flex items-center justify-between gap-3">
-            
+
             {/* Lado izquierdo: Logo + Título MJVC + Badge de sesión */}
             <div className="flex items-center gap-2.5 min-w-0">
               {/* Crest Logo Circular */}
@@ -124,10 +122,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm sm:text-base font-black tracking-tight text-[#DE9927]">
+                  <span className="font-google-sans font-bold text-[18px] tracking-tight text-[#DE9927] leading-tight">
                     MJVC EA's Jesús
                   </span>
-                  <span className="text-[10px] sm:text-xs text-white/85 font-medium bg-white/10 px-2 py-0.5 rounded border border-white/15">
+                  <span className="font-manrope font-semibold text-[10px] text-[#F3E7C8] bg-white/10 px-2 py-0.5 rounded border border-white/15">
                     [Sesión: {formattedRole}]
                   </span>
                 </div>
@@ -140,7 +138,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         type="text"
                         value={tempTitle}
                         onChange={(e) => setTempTitle(e.target.value)}
-                        className="h-5 text-[11px] bg-white/20 border border-[#DE9927] rounded px-1.5 text-white outline-none w-48 sm:w-64"
+                        className="h-6 font-manrope font-medium text-[13px] bg-white/20 border border-[#DE9927] rounded px-1.5 text-[#F3E7C8] outline-none w-48 sm:w-64 placeholder-[#F3E7C8]/50"
                         autoFocus
                         onBlur={handleSaveTitle}
                         onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
@@ -152,11 +150,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   ) : (
                     <div
                       onClick={() => setIsEditing(true)}
-                      className="flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-opacity text-white/80"
+                      className="flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-opacity text-[#F3E7C8]"
                       title="Clic para editar nombre del grupo"
                     >
                       <Pencil className="w-3 h-3 text-[#DE9927] shrink-0" />
-                      <span className="text-[11px] sm:text-xs font-normal truncate max-w-[200px] sm:max-w-[320px]">
+                      <span className="font-manrope font-medium text-[13px] text-[#F3E7C8] truncate max-w-[200px] sm:max-w-[320px]">
                         Grupo: {customTitle || groupName}
                       </span>
                     </div>
@@ -167,7 +165,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Acciones del Header */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              
+
               {/* Botón Escanear Pase QR */}
               <button
                 onClick={() => setIsQrScannerOpen(true)}

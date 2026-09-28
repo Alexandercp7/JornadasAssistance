@@ -20,7 +20,9 @@ enum AttendanceStatus {
   EMPTY
   PRESENT
   LATE
+  LATE_JUSTIFIED
   ABSENT
+  ABSENT_JUSTIFIED
 }
 
 model Group {
@@ -74,14 +76,15 @@ model Session {
 }
 
 model Attendance {
-  id        String           @id @default(cuid())
-  memberId  String
-  sessionId String
-  status    AttendanceStatus @default(EMPTY)
-  updatedAt DateTime         @updatedAt
+  id            String           @id @default(cuid())
+  memberId      String
+  sessionId     String
+  status        AttendanceStatus @default(EMPTY)
+  justification String?          @db.VarChar(300) // Motivo para LATE_JUSTIFIED / ABSENT_JUSTIFIED
+  updatedAt     DateTime         @updatedAt
 
-  member    Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  session   Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  member        Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  session       Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([memberId, sessionId])
   @@index([memberId])
@@ -96,6 +99,7 @@ model AuditLog {
   memberName      String           @db.VarChar(150)
   sessionName     String           @db.VarChar(100)
   status          AttendanceStatus
+  justification   String?          @db.VarChar(300) // Motivo registrado para estados justificados
   coordinatorRole RoleType
   registeredAt    DateTime         @default(now())
 

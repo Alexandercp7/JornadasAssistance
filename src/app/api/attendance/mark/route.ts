@@ -2,14 +2,31 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { AttendanceStatus, RoleType } from '@prisma/client'
 
+// Estados que requieren justificación obligatoria
+const JUSTIFIED_STATUSES: AttendanceStatus[] = [
+  AttendanceStatus.LATE_JUSTIFIED,
+  AttendanceStatus.ABSENT_JUSTIFIED,
+]
+
 // POST /api/attendance/mark
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { memberId, sessionId, status, coordinatorRole } = body
+    const { memberId, sessionId, status, coordinatorRole, justification } = body
 
     if (!memberId || !sessionId || !status) {
-      return NextResponse.json({ error: 'memberId, sessionId y status son requeridos' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'memberId, sessionId y status son requeridos' },
+        { status: 400 },
+      )
+    }
+
+    // Validar que los estados justificados lleven motivo
+    if (JUSTIFIED_STATUSES.includes(status as AttendanceStatus) && !justification?.trim()) {
+      return NextResponse.json(
+        { error: 'Se requiere un motivo de justificación para este estado' },
+        { status: 422 },
+      )
     }
 
     // 1. Actualizar o insertar el sello de asistencia
@@ -22,11 +39,13 @@ export async function POST(req: Request) {
       },
       update: {
         status: status as AttendanceStatus,
+        justification: justification?.trim() || null,
       },
       create: {
         memberId,
         sessionId,
         status: status as AttendanceStatus,
+        justification: justification?.trim() || null,
       },
       include: {
         member: {
@@ -45,7 +64,9 @@ export async function POST(req: Request) {
           memberName: attendance.member.name,
           sessionName: `${attendance.session.label} ${attendance.member.group.customTitle}`,
           status: status as AttendanceStatus,
-          coordinatorRole: (coordinatorRole as RoleType) || (attendance.member.group.slug as RoleType),
+          justification: justification?.trim() || null,
+          coordinatorRole:
+            (coordinatorRole as RoleType) || (attendance.member.group.slug as RoleType),
           registeredAt: new Date(),
         },
       })
