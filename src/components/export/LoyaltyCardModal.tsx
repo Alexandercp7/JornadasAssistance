@@ -65,11 +65,11 @@ export function LoyaltyCardModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-card text-card-foreground w-full max-w-md rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col max-h-[92vh]">
-        
+
         {/* Barra superior del Modal */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-primary/5">
           <span className="text-sm font-bold text-primary flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-accent-gold" /> Tarjeta Digital Premium
+            <Sparkles className="w-4 h-4 text-accent-gold" /> Tarjeta Digital
           </span>
           <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
             <X className="w-5 h-5 text-primary" />
@@ -78,7 +78,7 @@ export function LoyaltyCardModal({
 
         {/* Contenido Desplazable */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1 flex flex-col items-center">
-          
+
           {/* ================================================================ */}
           {/* TARJETA FÍSICA DIGITALIZADA (LOYALTY CARD EXPORTABLE)            */}
           {/* ================================================================ */}
@@ -97,9 +97,9 @@ export function LoyaltyCardModal({
                 <h3 className="text-lg font-black tracking-tight text-accent-gold">MJVC EA's Jesús</h3>
                 <p className="text-[10px] text-primary-foreground/80 font-medium">{member.roleSubtitle}</p>
               </div>
-              
+
               {/* === LOGO INTERACTIVO PARA ABRIR QR === */}
-              <div 
+              <div
                 onClick={onOpenQr}
                 title="Generar Pase QR"
                 className="w-10 h-10 relative rounded-full border-2 border-accent-gold bg-primary-foreground p-0.5 shadow-md shrink-0 cursor-pointer hover:scale-105 transition-transform active:scale-95"
@@ -138,19 +138,18 @@ export function LoyaltyCardModal({
                 {paddedStamps.slice(0, 8).map((stamp, idx) => (
                   <div
                     key={idx}
-                    className={`aspect-square rounded-xl border flex flex-col items-center justify-center relative shadow-sm transition-all ${
-                      stamp.status === 'PRESENT'
+                    className={`aspect-square rounded-xl border flex flex-col items-center justify-center relative shadow-sm transition-all ${stamp.status === 'PRESENT'
                         ? 'bg-accent-gold border-accent-gold text-primary shadow-[0_0_12px_rgba(227,163,54,0.4)]'
                         : stamp.status === 'LATE'
-                        ? 'bg-status-late border-status-late text-white'
-                        : stamp.status === 'LATE_JUSTIFIED'
-                        ? 'bg-status-late-justified border-status-late-justified text-white'
-                        : stamp.status === 'ABSENT'
-                        ? 'bg-status-absent border-status-absent text-white'
-                        : stamp.status === 'ABSENT_JUSTIFIED'
-                        ? 'bg-status-absent-justified border-status-absent-justified text-white'
-                        : 'bg-primary-foreground/5 border-primary-foreground/20 text-primary-foreground/30'
-                    }`}
+                          ? 'bg-status-late border-status-late text-white'
+                          : stamp.status === 'LATE_JUSTIFIED'
+                            ? 'bg-status-late-justified border-status-late-justified text-white'
+                            : stamp.status === 'ABSENT'
+                              ? 'bg-status-absent border-status-absent text-white'
+                              : stamp.status === 'ABSENT_JUSTIFIED'
+                                ? 'bg-status-absent-justified border-status-absent-justified text-white'
+                                : 'bg-primary-foreground/5 border-primary-foreground/20 text-primary-foreground/30'
+                      }`}
                   >
                     <span className="text-[8px] font-bold opacity-80 mb-0.5">{stamp.sessionLabel}</span>
                     {stamp.status === 'PRESENT' && <Check className="w-4 h-4 stroke-[3]" />}

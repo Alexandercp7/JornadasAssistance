@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useAttendanceStore } from '@/store/useAttendanceStore'
 import { useAuthStore } from '@/store/useAuthStore'
+import { ScanConfirmationCard } from './ScanConfirmationCard'
 
 interface QrScannerModalProps {
   isOpen: boolean
@@ -57,6 +58,14 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
   const lastScanTimeRef = useRef<number>(0)
   const cooldownRef = useRef<{ token: string; time: number } | null>(null)
   const resetTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const isProcessingRef = useRef(false)
+  const scanResultRef = useRef(scanResult)
+  scanResultRef.current = scanResult
+  const selectedSessionIdRef = useRef(selectedSessionId)
+  selectedSessionIdRef.current = selectedSessionId
+  const activeRoleRef = useRef(activeRole)
+  activeRoleRef.current = activeRole
+  const resultRef = useRef<HTMLDivElement>(null)
 
   // Inicializar sesión seleccionada con la última disponible
   useEffect(() => {
@@ -79,6 +88,16 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
         })
     }
   }, [])
+
+  // Auto-scroll suave para asegurar que la ScanConfirmationCard sea visible de inmediato
+  useEffect(() => {
+    if (scanResult) {
+      const timer = setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }, 50)
+      return () => clearTimeout(timer)
+    }
+  }, [scanResult])
 
   // Reproducir un sonido agradable de confirmación sin dependencias externas (Web Audio API)
   const playSuccessChime = useCallback(() => {
@@ -160,7 +179,7 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
   const handleProcessToken = useCallback(
     async (token: string) => {
       const cleaned = token.trim()
-      if (!cleaned || isProcessing) return
+      if (!cleaned || isProcessingRef.current || scanResultRef.current?.success) return
 
       // Prevenir re-escaneos inmediatos del mismo token en 3 segundos
       const nowMs = Date.now()
@@ -173,57 +192,75 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
       }
       cooldownRef.current = { token: cleaned, time: nowMs }
 
+      isProcessingRef.current = true
       setIsProcessing(true)
 
-      const targetMember = members.find((m) => m.qrToken === cleaned || m.id === cleaned)
-      const result = await processQrScan(
-        cleaned,
-        selectedSessionId || undefined,
-        activeRole || 'PREESCUELA',
-      )
+      try {
+        const currentMembers = useAttendanceStore.getState().members
+        const targetMember = currentMembers.find((m) => m.qrToken === cleaned || m.id === cleaned)
+        const result = await processQrScan(
+          cleaned,
+          selectedSessionIdRef.current || undefined,
+          activeRoleRef.current || 'PREESCUELA',
+        )
 
-      const now = new Date()
-      const timeStr = now.toLocaleTimeString('es-MX', {
-        hour12: true,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      })
+        const now = new Date()
+        const timeStr = now.toLocaleTimeString('es-MX', {
+          hour12: true,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })
 
-      const isWarning = result.message?.toLowerCase().includes('justificado')
+        const isWarning = result.message?.toLowerCase().includes('justificado')
 
-      setScanResult({
-        success: result.success,
-        isWarning,
-        message: result.message,
-        memberName:
-          result.memberName || targetMember?.name || (result.success ? 'Integrante MJVC' : undefined),
-        memberRole:
-          result.memberRole ||
-          targetMember?.roleSubtitle ||
-          (targetMember?.isAuxiliar ? '★ AUXILIAR PREESCUELA' : 'INTEGRANTE'),
-        timestamp: timeStr,
-        sessionLabel: result.sessionLabel,
-      })
+        const newResult = {
+          success: result.success,
+          isWarning,
+          message: result.message,
+          memberName:
+            result.memberName || targetMember?.name || (result.success ? 'Integrante MJVC' : undefined),
+          memberRole:
+            result.memberRole ||
+            targetMember?.roleSubtitle ||
+            (targetMember?.isAuxiliar ? '★ AUXILIAR PREESCUELA' : 'INTEGRANTE'),
+          timestamp: timeStr,
+          sessionLabel: result.sessionLabel,
+        }
 
-      setIsProcessing(false)
+        setScanResult(newResult)
+        scanResultRef.current = newResult
 
-      if (result.success) {
-        triggerCelebration()
+        if (result.success) {
+          triggerCelebration()
 
-        // Auto-limpiar resultado después de 4.5 segundos para permitir escaneo continuo
-        if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
-        resetTimerRef.current = setTimeout(() => {
-          setScanResult(null)
-        }, 4500)
+          // Auto-limpiar resultado después de 6 segundos para permitir escaneo continuo
+          if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
+          resetTimerRef.current = setTimeout(() => {
+            setScanResult(null)
+            scanResultRef.current = null
+          }, 6000)
+        }
+      } finally {
+        setIsProcessing(false)
+        isProcessingRef.current = false
       }
     },
-    [isProcessing, members, processQrScan, selectedSessionId, activeRole, triggerCelebration],
+    [processQrScan, triggerCelebration],
   )
 
-  // Bucle de lectura de frames en tiempo real
+  const handleProcessTokenRef = useRef(handleProcessToken)
+  handleProcessTokenRef.current = handleProcessToken
+
+  // Bucle de lectura de frames en tiempo real (estable, sin dependencias dinámicas)
   const scanLoop = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return
+
+    // Si ya hay un escaneo exitoso activo o se está procesando, pausar análisis
+    if (isProcessingRef.current || scanResultRef.current?.success) {
+      animFrameRef.current = requestAnimationFrame(scanLoop)
+      return
+    }
 
     const video = videoRef.current
     if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
@@ -246,14 +283,14 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
           })
 
           if (code && code.data && code.data.trim()) {
-            handleProcessToken(code.data.trim())
+            handleProcessTokenRef.current(code.data.trim())
           }
         }
       }
     }
 
     animFrameRef.current = requestAnimationFrame(scanLoop)
-  }, [handleProcessToken])
+  }, [])
 
   // Iniciar cámara con permisos y configuración adecuada
   const startCamera = useCallback(async () => {
@@ -344,10 +381,11 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
     }
   }
 
-  // Efecto cuando se abre o cierra el modal
+  // Efecto cuando se abre o cierra el modal: SOLO se ejecuta al cambiar isOpen
   useEffect(() => {
     if (isOpen) {
       setScanResult(null)
+      scanResultRef.current = null
       setManualToken('')
       startCamera()
     } else {
@@ -359,7 +397,7 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
       stopCamera()
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
     }
-  }, [isOpen, startCamera, stopCamera])
+  }, [isOpen])
 
   // Reiniciar cámara cuando cambia facingMode
   useEffect(() => {
@@ -446,7 +484,7 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
           )}
 
           {/* Visor de Cámara con Marco de Escáner y Animación Láser */}
-          <div className="w-full aspect-square max-w-[260px] bg-[#091A30] rounded-3xl relative overflow-hidden border border-[#0D356A] shadow-inner flex items-center justify-center">
+          <div className="w-full aspect-square max-w-[260px] shrink-0 bg-[#091A30] rounded-3xl relative overflow-hidden border border-[#0D356A] shadow-inner flex items-center justify-center">
             {/* El elemento video SIEMPRE debe estar en el DOM para que videoRef.current no sea null */}
             <video
               ref={videoRef}
@@ -511,92 +549,62 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
           </div>
 
           {/* Tarjeta de Resultado de Escaneo: Se muestra debajo del visor al escanear correctamente */}
-          {scanResult && (
-            <div
-              className={`w-full p-4 rounded-2xl border-2 space-y-2.5 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-300 shadow-md ${
-                scanResult.success
-                  ? 'bg-[#FAF3E7] border-[#DE9927]'
-                  : scanResult.isWarning
-                    ? 'bg-amber-50 border-amber-400 text-amber-900'
-                    : 'bg-red-50 border-[#7A1E2C] text-[#7A1E2C]'
-              }`}
-            >
-              {scanResult.success ? (
-                <>
-                  {/* Fila Superior: ✓ ESCANEO EXITOSO + Sparkle */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#196E52] flex items-center gap-1 uppercase tracking-wide">
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      ESCANEO EXITOSO
-                    </span>
-                    <Sparkles className="w-4 h-4 text-[#DE9927] animate-bounce" />
-                  </div>
-
-                  {/* Fila Central: Letra Inicial Dorada + Nombre del Auxiliar / Integrante + Rol */}
-                  <div className="flex items-center gap-3 pt-1">
-                    <div className="w-10 h-10 rounded-full bg-[#DE9927]/20 border border-[#DE9927]/40 text-[#C8841B] font-black text-base flex items-center justify-center shrink-0 shadow-xs">
-                      {scanResult.memberName?.charAt(0) || 'M'}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="font-extrabold text-sm sm:text-base text-[#0D356A] leading-snug truncate">
-                        {scanResult.memberName}
-                      </h4>
-                      <p className="text-[11px] font-bold text-[#DE9927] uppercase tracking-wide">
-                        {scanResult.memberRole}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Fila Inferior: ✓ Presente registrado + Hora y Sesión */}
-                  <div className="pt-2 border-t border-[#E5D5BC] flex items-center justify-between text-xs font-bold">
-                    <span className="text-[#196E52] flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      Presente registrado
-                    </span>
-                    <span className="text-[#0D356A] text-[11px] font-semibold">
-                      {scanResult.timestamp}
-                    </span>
-                  </div>
-
-                  {/* Botón para continuar rápido */}
-                  <button
-                    onClick={() => setScanResult(null)}
-                    className="w-full mt-1 py-1 text-center font-bold text-xs text-[#DE9927] hover:underline cursor-pointer"
-                  >
-                    Escanear siguiente integrante →
-                  </button>
-                </>
+          <div ref={resultRef} className="w-full shrink-0">
+            {scanResult &&
+              (scanResult.success ? (
+                <ScanConfirmationCard
+                  memberName={scanResult.memberName || 'Integrante MJVC'}
+                  memberRole={scanResult.memberRole || 'INTEGRANTE'}
+                  timestamp={scanResult.timestamp}
+                  statusText="Presente registrado"
+                />
               ) : (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between font-bold text-xs">
-                    <span>{scanResult.isWarning ? 'Atención' : 'Error de Escaneo'}</span>
-                    <button
-                      onClick={() => setScanResult(null)}
-                      className="text-[11px] text-[#0D356A] hover:underline cursor-pointer"
-                    >
-                      Cerrar aviso
-                    </button>
+                <div
+                  className={`w-full p-4 rounded-2xl border-2 space-y-2.5 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-300 shadow-md ${
+                    scanResult.isWarning
+                      ? 'bg-amber-50 border-amber-400 text-amber-900'
+                      : 'bg-red-50 border-[#7A1E2C] text-[#7A1E2C]'
+                  }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between font-bold text-xs">
+                      <span>{scanResult.isWarning ? 'Atención' : 'Error de Escaneo'}</span>
+                      <button
+                        onClick={() => {
+                          setScanResult(null)
+                          scanResultRef.current = null
+                        }}
+                        className="text-[11px] text-[#0D356A] hover:underline cursor-pointer"
+                      >
+                        Cerrar aviso
+                      </button>
+                    </div>
+                    <p className="text-xs leading-tight opacity-90">{scanResult.message}</p>
                   </div>
-                  <p className="text-xs leading-tight opacity-90">{scanResult.message}</p>
                 </div>
-              )}
-            </div>
-          )}
+              ))}
+          </div>
 
           {/* Ingreso manual por Token o Código */}
-          <div className="w-full flex gap-1.5 pt-2 border-t border-[#E5D5BC]">
+          <div className="w-full flex gap-1.5 pt-2 border-t border-[#E5D5BC] shrink-0">
             <input
               type="text"
               placeholder="Ingresar token o ID manual..."
               value={manualToken}
               onChange={(e) => setManualToken(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleProcessToken(manualToken)
+                if (e.key === 'Enter' && manualToken.trim()) {
+                  handleProcessToken(manualToken)
+                  setManualToken('')
+                }
               }}
               className="flex-1 h-9 px-3 rounded-xl border border-[#E5D5BC] bg-[#FAF3E7] text-xs outline-none focus:border-[#DE9927]"
             />
             <button
-              onClick={() => handleProcessToken(manualToken)}
+              onClick={() => {
+                handleProcessToken(manualToken)
+                setManualToken('')
+              }}
               disabled={!manualToken.trim() || isProcessing}
               className="bg-[#0D356A] hover:bg-[#09264D] disabled:opacity-50 text-white font-bold text-xs px-3.5 rounded-xl transition-colors cursor-pointer"
             >

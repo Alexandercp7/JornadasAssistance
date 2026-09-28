@@ -197,7 +197,7 @@ export default function LoginPage() {
                     key={num}
                     onClick={() => handlePinInput(num)}
                     disabled={isLoading}
-                    className="h-14 rounded-2xl bg-card border border-border shadow-sm text-xl font-bold text-primary hover:bg-primary hover:text-primary-foreground active:scale-95 transition-all outline-none"
+                    className="h-14 rounded-2xl bg-card border border-border shadow-sm text-xl font-bold text-primary active:bg-[#E3A336] active:border-[#E3A336] active:text-white active:scale-95 transition-all duration-150 active:duration-75 outline-none select-none"
                   >
                     {num}
                   </button>
@@ -214,7 +214,7 @@ export default function LoginPage() {
                 <button
                   onClick={() => handlePinInput('0')}
                   disabled={isLoading}
-                  className="h-14 rounded-2xl bg-card border border-border shadow-sm text-xl font-bold text-primary hover:bg-primary hover:text-primary-foreground active:scale-95 transition-all outline-none"
+                  className="h-14 rounded-2xl bg-card border border-border shadow-sm text-xl font-bold text-primary active:bg-[#E3A336] active:border-[#E3A336] active:text-white active:scale-95 transition-all duration-150 active:duration-75 outline-none select-none"
                 >
                   0
                 </button>
