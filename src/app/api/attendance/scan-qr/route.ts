@@ -51,6 +51,24 @@ export async function POST(req: Request) {
       )
     }
 
+    // Validar si el integrante corresponde a la coordinación que está escaneando
+    if (coordinatorRole && member.group.slug !== coordinatorRole) {
+      const currentRoleName = coordinatorRole === 'PREESCUELA' ? 'Preescuela' : 'Escuela'
+      return NextResponse.json({
+        success: false,
+        isWarning: true,
+        message: `${member.name} pertenece a ${member.group.name}, no a ${currentRoleName}.`,
+        member: {
+          id: member.id,
+          name: member.name,
+          isAuxiliar: member.isAuxiliar,
+          roleSubtitle: member.roleSubtitle,
+          groupId: member.groupId,
+          groupName: member.group.name,
+        },
+      })
+    }
+
     // 3. Determinar la sesión de asistencia
     let targetSessionId = sessionId
 
@@ -90,6 +108,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Sesión no encontrada' }, { status: 404 })
     }
 
+    if (session.groupId !== member.groupId) {
+      return NextResponse.json({
+        success: false,
+        isWarning: true,
+        message: `La fecha seleccionada no pertenece al grupo de ${member.name} (${member.group.name}).`,
+      })
+    }
+
     // 5. Verificar si ya tiene un estado justificado — NO sobreescribir con PRESENT
     const existing = await prisma.attendance.findUnique({
       where: {
@@ -121,9 +147,11 @@ export async function POST(req: Request) {
       })
     }
 
-    const wasAlreadyPresent = existing?.status === AttendanceStatus.PRESENT
+    const targetStatus = session.isLate ? AttendanceStatus.LATE : AttendanceStatus.PRESENT
+    const statusLabel = session.isLate ? 'Retardo' : 'Presente'
+    const wasAlreadyRecorded = existing?.status === targetStatus
 
-    // 6. Marcar como PRESENT (Asistencia confirmada por QR)
+    // 6. Marcar como PRESENT o LATE (según si la sesión tiene retardo activo)
     const attendance = await prisma.attendance.upsert({
       where: {
         memberId_sessionId: {
@@ -132,13 +160,13 @@ export async function POST(req: Request) {
         },
       },
       update: {
-        status: AttendanceStatus.PRESENT,
+        status: targetStatus,
         justification: null,
       },
       create: {
         memberId: member.id,
         sessionId: targetSessionId,
-        status: AttendanceStatus.PRESENT,
+        status: targetStatus,
       },
     })
 
@@ -149,7 +177,7 @@ export async function POST(req: Request) {
         memberId: member.id,
         memberName: member.name,
         sessionName: `${session.label} ${member.group.customTitle}`,
-        status: AttendanceStatus.PRESENT,
+        status: targetStatus,
         justification: null,
         coordinatorRole: (coordinatorRole as RoleType) || (member.group.slug as RoleType),
         registeredAt: new Date(),
@@ -158,8 +186,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: wasAlreadyPresent
-        ? `¡${member.name} ya estaba registrado/a como Presente!`
+      message: wasAlreadyRecorded
+        ? `¡${member.name} ya estaba registrado/a como ${statusLabel}!`
+        : session.isLate
+        ? `¡Retardo registrado para ${member.name}!`
         : `¡Asistencia confirmada para ${member.name}!`,
       member: {
         id: member.id,
@@ -172,6 +202,7 @@ export async function POST(req: Request) {
       session: {
         id: session.id,
         label: session.label,
+        isLate: session.isLate,
       },
       attendance,
     })

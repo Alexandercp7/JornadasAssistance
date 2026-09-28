@@ -184,6 +184,48 @@ describe('Módulo de Escaneo QR (API & Registro de Asistencia)', () => {
     expect(check?.status).toBe(AttendanceStatus.LATE_JUSTIFIED)
   })
 
+  it('6. Debe registrar status LATE cuando la sesión tiene isLate activo', async () => {
+    // 1. Activar isLate en la sesión de prueba
+    await prisma.session.update({
+      where: { id: testSessionId },
+      data: { isLate: true },
+    })
+
+    // 2. Limpiar asistencia previa del miembro para esta sesión
+    await prisma.attendance.deleteMany({
+      where: {
+        memberId: testMemberId,
+        sessionId: testSessionId,
+      },
+    })
+
+    const req = new Request('http://localhost:3000/api/attendance/scan-qr', {
+      method: 'POST',
+      body: JSON.stringify({
+        qrToken: testQrToken,
+        sessionId: testSessionId,
+      }),
+    })
+
+    const res = await POST(req)
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data.success).toBe(true)
+    expect(data.message).toContain('Retardo registrado')
+    expect(data.attendance.status).toBe(AttendanceStatus.LATE)
+
+    // Verificar en la DB
+    const check = await prisma.attendance.findUnique({
+      where: {
+        memberId_sessionId: {
+          memberId: testMemberId,
+          sessionId: testSessionId,
+        },
+      },
+    })
+    expect(check?.status).toBe(AttendanceStatus.LATE)
+  })
+
   afterAll(async () => {
     // Limpieza
     try {

@@ -7,10 +7,12 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const groupId = searchParams.get('groupId')
 
-    const where = groupId ? { groupId } : {}
+    if (!groupId || groupId === 'undefined') {
+      return NextResponse.json([])
+    }
 
     const sessions = await prisma.session.findMany({
-      where,
+      where: { groupId },
       orderBy: { sessionDate: 'asc' },
     })
 
@@ -25,7 +27,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { groupId, label, sessionDate } = body
+    const { groupId, label, sessionDate, isLate } = body
 
     if (!groupId || !label) {
       return NextResponse.json({ error: 'groupId y label son requeridos' }, { status: 400 })
@@ -38,6 +40,7 @@ export async function POST(req: Request) {
         groupId,
         label: label.trim(),
         sessionDate: dateObj,
+        isLate: Boolean(isLate),
       },
     })
 

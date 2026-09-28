@@ -60,7 +60,7 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-[100dvh] flex flex-col bg-background text-foreground transition-colors">
-      
+
       {/* Barra superior fija al seleccionar perfil */}
       {selectedRole && (
         <header className="bg-primary px-4 py-3 flex items-center justify-between shadow-md animate-in slide-in-from-top-4 duration-300">
@@ -72,24 +72,20 @@ export default function LoginPage() {
           </button>
           <div className="flex items-center gap-2">
             <span className="text-primary-foreground font-black text-sm tracking-wide">MJVC EA's Jesús</span>
-            <span className="bg-accent-gold text-primary text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm">
-              PRO
-            </span>
           </div>
         </header>
       )}
 
       <div
-        className={`flex-1 flex flex-col items-center justify-center p-4 sm:p-6 ${
-          selectedRole ? 'justify-start pt-8' : ''
-        }`}
+        className={`flex-1 flex flex-col items-center justify-center p-4 sm:p-6 ${selectedRole ? 'justify-start pt-8' : ''
+          }`}
       >
         <div className="w-full max-w-sm space-y-6">
-          
+
           {/* PASO 1: SELECCIÓN DE PERFIL */}
           {!selectedRole && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              
+
               {/* Logo y Encabezado */}
               <div className="text-center flex flex-col items-center mb-8">
                 <div className="relative w-24 h-24 mb-4 rounded-full shadow-[0_10px_25px_rgba(14,56,122,0.25)] border-2 border-accent-gold p-1 bg-white">
@@ -108,7 +104,7 @@ export default function LoginPage() {
 
               {/* Tarjetas de Selección de Perfil */}
               <div className="space-y-3">
-                
+
                 {/* Coordinación Preescuela */}
                 <Card
                   className="p-4 border-2 border-accent-gold cursor-pointer bg-card hover:bg-accent-gold/5 transition-all shadow-md rounded-2xl group"
@@ -121,7 +117,7 @@ export default function LoginPage() {
                     <div>
                       <h3 className="text-base font-bold text-primary mb-0.5">Coordinación Preescuela</h3>
                       <p className="text-xs text-primary/70 leading-snug">
-                        Asistencias, auxiliares y sellos de preescolar.
+                        Asistencias, auxiliares y sellos de preescuela.
                       </p>
                     </div>
                   </div>
@@ -139,7 +135,7 @@ export default function LoginPage() {
                     <div>
                       <h3 className="text-base font-bold text-primary mb-0.5">Coordinación Escuela</h3>
                       <p className="text-xs text-primary/70 leading-snug">
-                        Bitácora y control de asistencia de escuela.
+                        Asistencias, auxiliares y sellos de escuela.
                       </p>
                     </div>
                   </div>
@@ -151,7 +147,7 @@ export default function LoginPage() {
           {/* PASO 2: INGRESO DE PIN */}
           {selectedRole && (
             <div className="animate-in fade-in zoom-in-95 duration-300 flex flex-col items-center">
-              
+
               <div className="text-center mb-6">
                 <div className="w-12 h-12 rounded-2xl bg-primary text-accent-gold flex items-center justify-center mx-auto mb-3 shadow-md">
                   <Lock className="w-6 h-6" />
@@ -167,11 +163,10 @@ export default function LoginPage() {
                 {[0, 1, 2, 3].map((index) => (
                   <div
                     key={index}
-                    className={`w-4 h-4 rounded-full border-2 transition-all duration-200 ${
-                      pin.length > index
-                        ? 'bg-accent-gold border-accent-gold scale-110 shadow-sm'
-                        : 'border-primary/30 bg-transparent'
-                    } ${error ? 'border-status-absent bg-status-absent/20' : ''}`}
+                    className={`w-4 h-4 rounded-full border-2 transition-all duration-200 ${pin.length > index
+                      ? 'bg-accent-gold border-accent-gold scale-110 shadow-sm'
+                      : 'border-primary/30 bg-transparent'
+                      } ${error ? 'border-status-absent bg-status-absent/20' : ''}`}
                   />
                 ))}
               </div>
@@ -227,12 +222,6 @@ export default function LoginPage() {
                   Borrar
                 </button>
               </div>
-
-              {/* Ayuda con PINs predeterminados */}
-              <div className="mt-8 text-center text-[11px] text-primary/40">
-                <p>PINs demo: Preescuela: 1234 | Escuela: 5678</p>
-              </div>
-
             </div>
           )}
 

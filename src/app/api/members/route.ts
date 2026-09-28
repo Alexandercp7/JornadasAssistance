@@ -8,10 +8,12 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const groupId = searchParams.get('groupId')
 
-    const where = groupId ? { groupId } : {}
+    if (!groupId || groupId === 'undefined') {
+      return NextResponse.json([])
+    }
 
     const members = await prisma.member.findMany({
-      where,
+      where: { groupId },
       include: {
         attendances: {
           include: {

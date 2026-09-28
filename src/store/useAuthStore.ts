@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { useAttendanceStore } from './useAttendanceStore'
 
 export type Role = 'PREESCUELA' | 'ESCUELA' | null
 
@@ -93,6 +94,12 @@ export const useAuthStore = create<AuthState>()(
           await fetch('/api/auth/logout', { method: 'POST' })
         } catch (e) {
           console.error('Error al limpiar cookie de sesión:', e)
+        }
+
+        try {
+          useAttendanceStore.getState().resetGroupData()
+        } catch (e) {
+          console.error('Error al reiniciar store de asistencia:', e)
         }
 
         set({

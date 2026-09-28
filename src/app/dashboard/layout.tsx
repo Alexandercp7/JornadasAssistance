@@ -52,8 +52,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const isSessionValid = await checkSession()
       if (isMounted) {
         if (isSessionValid) {
-          const currentGroupId = useAuthStore.getState().groupId || 'grp_preescuela'
-          setTempTitle(useAuthStore.getState().customTitle || useAuthStore.getState().groupName)
+          const authState = useAuthStore.getState()
+          const currentGroupId =
+            authState.groupId ||
+            (authState.activeRole === 'ESCUELA' ? 'grp_escuela' : 'grp_preescuela')
+          setTempTitle(authState.customTitle || authState.groupName)
           fetchGroupData(currentGroupId)
           setIsVerifying(false)
         } else {

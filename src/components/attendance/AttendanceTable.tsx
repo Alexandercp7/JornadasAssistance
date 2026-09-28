@@ -11,7 +11,7 @@ import { LoyaltyCardModal } from '@/components/export/LoyaltyCardModal'
 import { MemberModal } from './MemberModal'
 import { AddSessionModal } from './AddSessionModal'
 import { QrPassModal } from './QrPassModal'
-import { useAttendanceStore, MemberItem } from '@/store/useAttendanceStore'
+import { useAttendanceStore, MemberItem, SessionItem } from '@/store/useAttendanceStore'
 import { useAuthStore } from '@/store/useAuthStore'
 
 export function AttendanceTable() {
@@ -23,15 +23,28 @@ export function AttendanceTable() {
     updateMember,
     deleteMember,
     addSession,
+    updateSession,
     deleteSession,
   } = useAttendanceStore()
 
   const { activeRole, customTitle, groupId } = useAuthStore()
 
+  const currentGroupId =
+    groupId || (activeRole === 'ESCUELA' ? 'grp_escuela' : 'grp_preescuela')
+
+  // Filtrar estrictamente sesiones y miembros pertenecientes a la coordinación activa
+  const groupSessions = sessions.filter(
+    (s) => !s.groupId || s.groupId === currentGroupId
+  )
+  const groupMembers = members.filter(
+    (m) => !m.groupId || m.groupId === currentGroupId
+  )
+
   // Estados de Modales
   const [selectedMemberForCard, setSelectedMemberForCard] = useState<MemberItem | null>(null)
   const [selectedMemberForQr, setSelectedMemberForQr] = useState<MemberItem | null>(null)
   const [memberToEdit, setMemberToEdit] = useState<MemberItem | null>(null)
+  const [sessionToEdit, setSessionToEdit] = useState<SessionItem | null>(null)
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false)
   const [isSessionModalOpen, setIsSessionModalOpen] = useState(false)
 
@@ -42,7 +55,7 @@ export function AttendanceTable() {
     if (tableContainerRef.current) {
       tableContainerRef.current.scrollLeft = tableContainerRef.current.scrollWidth
     }
-  }, [sessions])
+  }, [groupSessions])
 
   // Manejador para guardar miembro (Crear o Editar)
   const handleSaveMember = (data: {
@@ -55,7 +68,7 @@ export function AttendanceTable() {
       updateMember(memberToEdit.id, data)
     } else {
       addMember({
-        groupId: groupId || 'grp_preescuela',
+        groupId: currentGroupId,
         ...data,
       })
     }
@@ -119,7 +132,10 @@ export function AttendanceTable() {
 
           {/* Botón Fecha */}
           <button
-            onClick={() => setIsSessionModalOpen(true)}
+            onClick={() => {
+              setSessionToEdit(null)
+              setIsSessionModalOpen(true)
+            }}
             className="border-2 border-[#0D356A] text-[#0D356A] hover:bg-[#0D356A]/5 bg-transparent font-manrope font-semibold text-[11px] px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
           >
             <Calendar className="w-3.5 h-3.5" />
@@ -140,15 +156,20 @@ export function AttendanceTable() {
                   INTEGRANTE
                 </th>
 
-                {sessions.map((session) => {
+                {groupSessions.map((session) => {
                   const { day, month } = parseSessionHeader(session.label, session.sessionDate)
 
                   return (
                     <th
                       key={session.id}
-                      className="px-3 py-2.5 text-center min-w-[65px] group relative"
+                      onClick={() => {
+                        setSessionToEdit(session)
+                        setIsSessionModalOpen(true)
+                      }}
+                      className="px-3 py-2.5 text-center min-w-[65px] group relative cursor-pointer hover:bg-white/15 transition-all select-none"
+                      title="Clic para configurar fecha o activar/desactivar retardo"
                     >
-                      <div className="flex flex-col items-center justify-center leading-none select-none">
+                      <div className="flex flex-col items-center justify-center leading-none">
                         {/* Día encima */}
                         <span className="text-white text-[12px] font-manrope font-bold">
                           {day}
@@ -159,19 +180,6 @@ export function AttendanceTable() {
                             {month}
                           </span>
                         ) : null}
-                        {sessions.length > 1 && (
-                          <button
-                            onClick={() => {
-                              if (confirm(`¿Eliminar la fecha de sesión ${session.label}?`)) {
-                                deleteSession(session.id)
-                              }
-                            }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity text-red-300 text-[9px] hover:underline mt-1"
-                            title="Eliminar sesión"
-                          >
-                            ✕
-                          </button>
-                        )}
                       </div>
                     </th>
                   )
@@ -186,14 +194,14 @@ export function AttendanceTable() {
 
             {/* Filas de la Tabla */}
             <tbody className="divide-y divide-[#E5D5BC]/60 bg-[#FAF3E7]">
-              {members.map((member) => {
+              {groupMembers.map((member) => {
                 let presentCount = 0
                 let lateCount = 0
                 let lateJustifiedCount = 0
                 let absentCount = 0
                 let absentJustifiedCount = 0
 
-                sessions.forEach((s) => {
+                groupSessions.forEach((s) => {
                   const att = member.attendances?.find((a) => a.sessionId === s.id)
                   if (att?.status === 'PRESENT') presentCount++
                   else if (att?.status === 'LATE') lateCount++
@@ -262,7 +270,7 @@ export function AttendanceTable() {
                     </td>
 
                     {/* Celdas de Sellos Circulares */}
-                    {sessions.map((session) => {
+                    {groupSessions.map((session) => {
                       const att = member.attendances?.find((a) => a.sessionId === session.id)
                       const currentStatus: AttendanceStatus = att ? att.status : 'EMPTY'
 
@@ -314,21 +322,28 @@ export function AttendanceTable() {
         onSave={handleSaveMember}
         onDelete={deleteMember}
         memberToEdit={memberToEdit}
-        groupTitle={customTitle || 'Preescuela'}
+        groupTitle={customTitle || (activeRole === 'ESCUELA' ? 'Escuela' : 'Preescuela')}
       />
 
       <AddSessionModal
         isOpen={isSessionModalOpen}
-        onClose={() => setIsSessionModalOpen(false)}
-        onAdd={(label, sessionDate) => addSession(groupId || 'grp_preescuela', label, sessionDate)}
+        onClose={() => {
+          setIsSessionModalOpen(false)
+          setSessionToEdit(null)
+        }}
+        sessionToEdit={sessionToEdit}
+        onAdd={(label, sessionDate, isLate) => addSession(currentGroupId, label, sessionDate, isLate)}
+        onUpdate={(sessionId, data) => updateSession(sessionId, data)}
+        onDelete={(sessionId) => deleteSession(sessionId)}
+        canDelete={groupSessions.length > 1}
       />
 
       <LoyaltyCardModal
         isOpen={!!selectedMemberForCard}
         onClose={() => setSelectedMemberForCard(null)}
         member={selectedMemberForCard}
-        sessions={sessions}
-        groupTitle={customTitle || 'Preescuela'}
+        sessions={groupSessions}
+        groupTitle={customTitle || (activeRole === 'ESCUELA' ? 'Escuela' : 'Preescuela')}
         onOpenQr={() => {
           setSelectedMemberForCard(null);
           setSelectedMemberForQr(selectedMemberForCard);

@@ -19,10 +19,13 @@ interface ReportViewProps {
 
 export function ReportView({ onNavigate, metrics }: ReportViewProps) {
   const { auditLogs } = useAttendanceStore()
-  const { customTitle, groupName, groupId } = useAuthStore()
+  const { customTitle, groupName, groupId, activeRole } = useAuthStore()
+
+  const currentGroupId =
+    groupId || (activeRole === 'ESCUELA' ? 'grp_escuela' : 'grp_preescuela')
 
   const handleExportExcel = () => {
-    window.open(`/api/export/excel?groupId=${groupId || 'grp_preescuela'}`, '_blank')
+    window.open(`/api/export/excel?groupId=${currentGroupId}`, '_blank')
   }
 
   const handleShareWhatsApp = () => {

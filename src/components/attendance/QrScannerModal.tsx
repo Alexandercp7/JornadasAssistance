@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import confetti from 'canvas-confetti'
 import jsQR from 'jsqr'
 import {
@@ -26,7 +26,15 @@ interface QrScannerModalProps {
 
 export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
   const { processQrScan, members, sessions } = useAttendanceStore()
-  const { activeRole } = useAuthStore()
+  const { activeRole, groupId } = useAuthStore()
+
+  const currentGroupId =
+    groupId || (activeRole === 'ESCUELA' ? 'grp_escuela' : 'grp_preescuela')
+
+  // Filtrar estrictamente sesiones de la coordinación activa
+  const currentSessions = useMemo(() => {
+    return sessions.filter((s) => !s.groupId || s.groupId === currentGroupId)
+  }, [sessions, currentGroupId])
 
   // Sesión objetivo (por defecto la más reciente)
   const [selectedSessionId, setSelectedSessionId] = useState<string>('')
@@ -40,6 +48,7 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
     timestamp?: string
     sessionLabel?: string
     isWarning?: boolean
+    isLate?: boolean
   } | null>(null)
   const [manualToken, setManualToken] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -67,12 +76,16 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
   activeRoleRef.current = activeRole
   const resultRef = useRef<HTMLDivElement>(null)
 
-  // Inicializar sesión seleccionada con la última disponible
+  // Inicializar sesión seleccionada con la última disponible del grupo activo
   useEffect(() => {
-    if (sessions && sessions.length > 0) {
-      setSelectedSessionId(sessions[sessions.length - 1].id)
+    if (currentSessions && currentSessions.length > 0) {
+      if (!selectedSessionId || !currentSessions.some((s) => s.id === selectedSessionId)) {
+        setSelectedSessionId(currentSessions[currentSessions.length - 1].id)
+      }
+    } else {
+      setSelectedSessionId('')
     }
-  }, [sessions])
+  }, [currentSessions, selectedSessionId])
 
   // Detectar soporte para múltiples cámaras
   useEffect(() => {
@@ -213,10 +226,13 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
         })
 
         const isWarning = result.message?.toLowerCase().includes('justificado')
+        const currentSession = currentSessions.find((s) => s.id === (selectedSessionIdRef.current || undefined))
+        const isLate = result.status === 'LATE' || Boolean(currentSession?.isLate) || Boolean(result.status?.includes('LATE'))
 
         const newResult = {
           success: result.success,
           isWarning,
+          isLate,
           message: result.message,
           memberName:
             result.memberName || targetMember?.name || (result.success ? 'Integrante MJVC' : undefined),
@@ -463,7 +479,7 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
         {/* Contenido del Escáner */}
         <div className="p-4 sm:p-5 space-y-4 flex flex-col items-center overflow-y-auto">
           {/* Selector de Sesión de Registro */}
-          {sessions && sessions.length > 0 && (
+          {currentSessions && currentSessions.length > 0 && (
             <div className="w-full flex items-center justify-between bg-[#FAF3E7] px-3 py-1.5 rounded-xl border border-[#E5D5BC] text-xs">
               <span className="font-bold text-[#0D356A] flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-[#DE9927]" />
@@ -474,9 +490,9 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
                 onChange={(e) => setSelectedSessionId(e.target.value)}
                 className="bg-transparent font-bold text-[#0D356A] outline-none cursor-pointer text-xs"
               >
-                {sessions.map((s) => (
+                {currentSessions.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.label} ({new Date(s.sessionDate).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })})
+                    {s.label}
                   </option>
                 ))}
               </select>
@@ -556,7 +572,8 @@ export function QrScannerModal({ isOpen, onClose }: QrScannerModalProps) {
                   memberName={scanResult.memberName || 'Integrante MJVC'}
                   memberRole={scanResult.memberRole || 'INTEGRANTE'}
                   timestamp={scanResult.timestamp}
-                  statusText="Presente registrado"
+                  isLate={scanResult.isLate}
+                  statusText={scanResult.isLate ? 'Retardo registrado' : 'Presente registrado'}
                 />
               ) : (
                 <div

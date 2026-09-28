@@ -66,6 +66,7 @@ model Session {
   groupId     String
   label       String       @db.VarChar(50) // Ej. "12/Oct"
   sessionDate DateTime     @db.Date
+  isLate      Boolean      @default(false)
   createdAt   DateTime     @default(now())
 
   group       Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)

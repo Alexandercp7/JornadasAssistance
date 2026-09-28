@@ -1,5 +1,5 @@
 import React from 'react'
-import { Check, Star } from 'lucide-react'
+import { Check, Star, Clock } from 'lucide-react'
 
 export interface ScanConfirmationCardProps {
   /** Nombre completo del integrante registrado */
@@ -14,6 +14,8 @@ export interface ScanConfirmationCardProps {
   initial?: string
   /** Clases CSS adicionales para el contenedor */
   className?: string
+  /** Indica si la asistencia se registró como retardo */
+  isLate?: boolean
 }
 
 /**
@@ -44,14 +46,17 @@ export function ScanConfirmationCard({
   memberName,
   memberRole,
   timestamp,
-  statusText = 'Presente registrado',
+  statusText,
   initial,
   className = '',
+  isLate = false,
 }: ScanConfirmationCardProps) {
   const safeName = memberName?.trim() || 'María García'
   // Limpiar el rol de cualquier símbolo previo (como estrellas de texto)
   const safeRole = memberRole?.trim() || 'AUXILIAR PREESCUELA'
   const cleanRole = safeRole.replace(/^[★\s*-]+/, '').trim() || 'AUXILIAR PREESCUELA'
+
+  const resolvedStatusText = statusText || (isLate ? 'Retardo registrado' : 'Presente registrado')
 
   // Letra inicial aislada (por defecto la primera letra del nombre o "M")
   const displayInitial =
@@ -74,10 +79,14 @@ export function ScanConfirmationCard({
     >
       {/* Sección Superior: Encabezado */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-[#196E52]">
-          <Check className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
+        <div className={`flex items-center gap-1.5 ${isLate ? 'text-[#DE9927]' : 'text-[#196E52]'}`}>
+          {isLate ? (
+            <Clock className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
+          ) : (
+            <Check className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
+          )}
           <span className="text-xs font-semibold tracking-wider uppercase">
-            ESCANEO EXITOSO
+            {isLate ? 'ESCANEO CON RETARDO' : 'ESCANEO EXITOSO'}
           </span>
         </div>
 
@@ -116,10 +125,14 @@ export function ScanConfirmationCard({
 
       {/* Sección Inferior: Estado y Hora */}
       <div className="flex items-center justify-between text-xs">
-        {/* Texto Izquierdo: Check + Presente registrado */}
-        <div className="flex items-center gap-1.5 text-[#196E52] font-medium">
-          <Check className="w-3.5 h-3.5 stroke-[2.5]" aria-hidden="true" />
-          <span>{statusText}</span>
+        {/* Texto Izquierdo: Check o Clock + Estado */}
+        <div className={`flex items-center gap-1.5 font-medium ${isLate ? 'text-[#DE9927]' : 'text-[#196E52]'}`}>
+          {isLate ? (
+            <Clock className="w-3.5 h-3.5 stroke-[2.5]" aria-hidden="true" />
+          ) : (
+            <Check className="w-3.5 h-3.5 stroke-[2.5]" aria-hidden="true" />
+          )}
+          <span>{resolvedStatusText}</span>
         </div>
 
         {/* Texto Derecho: Hora */}

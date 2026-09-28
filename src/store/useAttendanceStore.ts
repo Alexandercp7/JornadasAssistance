@@ -13,6 +13,7 @@ export interface SessionItem {
   groupId: string
   label: string
   sessionDate: string
+  isLate?: boolean
 }
 
 export interface AttendanceItem {
@@ -57,6 +58,7 @@ interface AttendanceStoreState {
   // Métodos de carga estrictos desde la DB
   fetchGroupData: (groupId: string) => Promise<void>
   fetchAuditLogs: (groupId?: string, search?: string) => Promise<void>
+  resetGroupData: () => void
 
   // Métodos de miembros (CRUD)
   addMember: (data: {
@@ -74,7 +76,8 @@ interface AttendanceStoreState {
   toggleAuxiliar: (id: string) => Promise<boolean>
 
   // Métodos de sesiones
-  addSession: (groupId: string, label: string, sessionDate?: string) => Promise<boolean>
+  addSession: (groupId: string, label: string, sessionDate?: string, isLate?: boolean) => Promise<boolean>
+  updateSession: (sessionId: string, data: { label?: string; sessionDate?: string; isLate?: boolean }) => Promise<boolean>
   deleteSession: (sessionId: string) => Promise<boolean>
 
   // Marcado de asistencia
@@ -98,6 +101,7 @@ interface AttendanceStoreState {
     memberRole?: string
     isAuxiliar?: boolean
     sessionLabel?: string
+    status?: AttendanceStatus
   }>
 }
 
@@ -136,6 +140,10 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     }
 
     get().fetchAuditLogs(groupId)
+  },
+
+  resetGroupData: () => {
+    set({ members: [], sessions: [], auditLogs: [], error: null })
   },
 
   fetchAuditLogs: async (groupId?: string, search?: string) => {
@@ -220,23 +228,47 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
     })
   },
 
-  addSession: async (groupId, label, sessionDate) => {
+  addSession: async (groupId, label, sessionDate, isLate = false) => {
     try {
       const res = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId, label, sessionDate }),
+        body: JSON.stringify({ groupId, label, sessionDate, isLate }),
       })
 
       if (res.ok) {
         const newSession = await res.json()
-        set((state) => ({ sessions: [...state.sessions, newSession] }))
+        set((state) => {
+          const filtered = state.sessions.filter((s) => s.id !== newSession.id)
+          return { sessions: [...filtered, newSession] }
+        })
         // Refrescar datos para sincronizar celdas de asistencia
         get().fetchGroupData(groupId)
         return true
       }
     } catch (e) {
       console.error('Error al crear sesión en base de datos:', e)
+    }
+    return false
+  },
+
+  updateSession: async (sessionId, data) => {
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+
+      if (res.ok) {
+        const updated = await res.json()
+        set((state) => ({
+          sessions: state.sessions.map((s) => (s.id === sessionId ? { ...s, ...updated } : s)),
+        }))
+        return true
+      }
+    } catch (e) {
+      console.error('Error al actualizar sesión en base de datos:', e)
     }
     return false
   },
@@ -315,6 +347,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
       if (res.ok && data.success !== false) {
         // Actualización optimista de estado para reflejar el estado inmediatamente en UI
         if (data.attendance && data.member && data.session) {
+          const newStatus = (data.attendance.status as AttendanceStatus) || (data.session.isLate ? 'LATE' : 'PRESENT')
           set((state) => ({
             members: state.members.map((m) => {
               if (m.id !== data.member.id) return m
@@ -323,7 +356,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
               if (existingAttIndex >= 0) {
                 updatedAttendances[existingAttIndex] = {
                   ...updatedAttendances[existingAttIndex],
-                  status: 'PRESENT',
+                  status: newStatus,
                   justification: null,
                 }
               } else {
@@ -331,7 +364,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
                   id: data.attendance.id || `att_${Date.now()}`,
                   memberId: m.id,
                   sessionId: data.session.id,
-                  status: 'PRESENT',
+                  status: newStatus,
                   justification: null,
                 })
               }
@@ -341,8 +374,8 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
         }
 
         const targetGroupId =
-          data.member?.groupId ||
-          get().members.find((m) => m.qrToken === qrToken || m.id === data.member?.id)?.groupId
+          get().members[0]?.groupId ||
+          (coordinatorRole === 'ESCUELA' ? 'grp_escuela' : 'grp_preescuela')
 
         if (targetGroupId) {
           get().fetchGroupData(targetGroupId)
@@ -356,6 +389,7 @@ export const useAttendanceStore = create<AttendanceStoreState>((set, get) => ({
           memberRole: data.member?.roleSubtitle,
           isAuxiliar: data.member?.isAuxiliar,
           sessionLabel: data.session?.label,
+          status: (data.attendance?.status as AttendanceStatus) || (data.session?.isLate ? 'LATE' : 'PRESENT'),
         }
       } else {
         return { success: false, message: data.error || data.message || 'Código QR no reconocido' }

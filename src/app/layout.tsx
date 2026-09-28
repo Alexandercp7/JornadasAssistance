@@ -4,6 +4,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "MJVC Attendance",
   description: "Control de asistencia privado",
+  icons: {
+    icon: "/vector.png",
+    shortcut: "/vector.png",
+    apple: "/vector.png",
+  },
 };
 
 export default function RootLayout({
@@ -14,6 +19,8 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
+        <link rel="icon" href="/vector.png" sizes="any" />
+        <link rel="apple-touch-icon" href="/vector.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

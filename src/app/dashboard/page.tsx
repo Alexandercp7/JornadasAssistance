@@ -5,6 +5,7 @@ import { ArrowLeft, History, FileText } from 'lucide-react'
 import { AttendanceTable } from '@/components/attendance/AttendanceTable'
 import { AttendanceLog } from '@/components/attendance/AttendanceLog'
 import { useAttendanceStore } from '@/store/useAttendanceStore'
+import { useAuthStore } from '@/store/useAuthStore'
 import { SummaryView } from '@/components/dashboard/SummaryView'
 import { ReportView } from '@/components/dashboard/ReportView'
 
@@ -12,18 +13,30 @@ type ViewState = 'resumen' | 'asistencia' | 'bitacora' | 'reporte'
 
 export default function DashboardPage() {
   const { members, sessions } = useAttendanceStore()
+  const { activeRole, groupId } = useAuthStore()
   const [activeView, setActiveView] = useState<ViewState>('resumen')
+
+  const currentGroupId =
+    groupId || (activeRole === 'ESCUELA' ? 'grp_escuela' : 'grp_preescuela')
+
+  const currentSessions = useMemo(() => {
+    return sessions.filter((s) => !s.groupId || s.groupId === currentGroupId)
+  }, [sessions, currentGroupId])
+
+  const currentMembers = useMemo(() => {
+    return members.filter((m) => !m.groupId || m.groupId === currentGroupId)
+  }, [members, currentGroupId])
 
   // Cálculos consolidados y memorizados para evitar re-renders innecesarios
   const metrics = useMemo(() => {
-    const activeSession = sessions.length > 0 ? sessions[sessions.length - 1] : null
+    const activeSession = currentSessions.length > 0 ? currentSessions[currentSessions.length - 1] : null
     
     let activePresent = 0, activeLate = 0, activeAbsent = 0
     let totalEvaluatedAll = 0, totalPointsAll = 0
     let maxRate = -1, topMemberName = 'N/A'
 
     if (activeSession) {
-      members.forEach((m) => {
+      currentMembers.forEach((m) => {
         const att = m.attendances?.find((a) => a.sessionId === activeSession.id)
         if (att?.status === 'PRESENT') activePresent++
         else if (att?.status === 'LATE' || att?.status === 'LATE_JUSTIFIED') activeLate++
@@ -31,7 +44,7 @@ export default function DashboardPage() {
       })
     }
 
-    members.forEach((m) => {
+    currentMembers.forEach((m) => {
       let pPoints = 0, totalS = 0
       m.attendances?.forEach((a) => {
         if (a.status === 'PRESENT') { totalPointsAll += 1; totalEvaluatedAll += 1; pPoints += 1 } 
@@ -54,11 +67,11 @@ export default function DashboardPage() {
       activeAbsent,
       globalAttendanceRate,
       topMemberName,
-      totalMembers: members.length,
-      totalSessions: sessions.length,
+      totalMembers: currentMembers.length,
+      totalSessions: currentSessions.length,
       activeSessionLabel: activeSession ? activeSession.label : 'Actual'
     }
-  }, [members, sessions])
+  }, [currentMembers, currentSessions])
 
   return (
     <div className="animate-in fade-in duration-300 pb-8">
