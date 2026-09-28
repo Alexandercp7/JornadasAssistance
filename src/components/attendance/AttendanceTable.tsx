@@ -186,7 +186,7 @@ export function AttendanceTable() {
 
             {/* Filas de la Tabla */}
             <tbody className="divide-y divide-[#E5D5BC]/60 bg-[#FAF3E7]">
-              {members.slice(0, 8).map((member) => {
+              {members.map((member) => {
                 let presentCount = 0
                 let lateCount = 0
                 let lateJustifiedCount = 0

@@ -120,6 +120,36 @@ async function main() {
     },
   })
 
+  const extraStudents = [
+    { id: 'mem_pre_5', name: 'Santiago Mendoza', qrToken: 'QR_SANTIAGO_MENDOZA_PRE501' },
+    { id: 'mem_pre_6', name: 'Camila Flores', qrToken: 'QR_CAMILA_FLORES_PRE502' },
+    { id: 'mem_pre_7', name: 'Leonardo Gómez', qrToken: 'QR_LEONARDO_GOMEZ_PRE503' },
+    { id: 'mem_pre_8', name: 'Isabella Morales', qrToken: 'QR_ISABELLA_MORALES_PRE504' },
+    { id: 'mem_pre_9', name: 'Emiliano Vargas', qrToken: 'QR_EMILIANO_VARGAS_PRE505' },
+    { id: 'mem_pre_10', name: 'Valentina Herrera', qrToken: 'QR_VALENTINA_HERRERA_PRE506' },
+    { id: 'mem_pre_11', name: 'Sebastián Navarro', qrToken: 'QR_SEBASTIAN_NAVARRO_PRE507' },
+    { id: 'mem_pre_12', name: 'Lucía Reyes', qrToken: 'QR_LUCIA_REYES_PRE508' },
+    { id: 'mem_pre_13', name: 'Matías Peña', qrToken: 'QR_MATIAS_PENA_PRE509' },
+    { id: 'mem_pre_14', name: 'Regina Cruz', qrToken: 'QR_REGINA_CRUZ_PRE510' },
+  ]
+
+  const createdExtraMembers = []
+  for (const s of extraStudents) {
+    const mem = await prisma.member.upsert({
+      where: { qrToken: s.qrToken },
+      update: {},
+      create: {
+        id: s.id,
+        groupId: preescuela.id,
+        name: s.name,
+        isAuxiliar: false,
+        roleSubtitle: 'Integrantes - Preescuela',
+        qrToken: s.qrToken,
+      },
+    })
+    createdExtraMembers.push(mem)
+  }
+
   // 4. Asistencias
   const attendancesData = [
     { memberId: m1.id, sessionId: s1.id, status: AttendanceStatus.PRESENT },
@@ -142,6 +172,19 @@ async function main() {
     { memberId: m4.id, sessionId: s3.id, status: AttendanceStatus.PRESENT },
     { memberId: m4.id, sessionId: s4.id, status: AttendanceStatus.PRESENT },
   ]
+
+  const sessionsList = [s1, s2, s3, s4]
+  for (let idx = 0; idx < createdExtraMembers.length; idx++) {
+    const mem = createdExtraMembers[idx]
+    for (let sIdx = 0; sIdx < sessionsList.length; sIdx++) {
+      const sess = sessionsList[sIdx]
+      let status = AttendanceStatus.PRESENT
+      if ((idx + sIdx) % 7 === 0) status = AttendanceStatus.LATE
+      else if ((idx + sIdx) % 9 === 0) status = AttendanceStatus.LATE_JUSTIFIED
+      else if ((idx + sIdx) % 11 === 0) status = AttendanceStatus.ABSENT
+      attendancesData.push({ memberId: mem.id, sessionId: sess.id, status })
+    }
+  }
 
   for (const att of attendancesData) {
     await prisma.attendance.upsert({
