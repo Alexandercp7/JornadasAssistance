@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql" // Switch to "postgresql" when deploying to Supabase
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -46,7 +46,7 @@ model Member {
   groupId      String
   name         String       @db.VarChar(150)
   isAuxiliar   Boolean      @default(false)
-  avatarUrl    String?      @db.LongText
+  avatarUrl    String?      @db.Text
   roleSubtitle String       @default("Integrantes") @db.VarChar(150)
   qrToken      String       @unique @db.VarChar(64)
   createdAt    DateTime     @default(now())

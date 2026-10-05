@@ -200,29 +200,32 @@ async function main() {
   }
 
   // 5. Auditoría inicial
-  await prisma.auditLog.createMany({
-    data: [
-      {
-        groupId: preescuela.id,
-        memberId: m1.id,
-        memberName: m1.name,
-        sessionName: '02/Nov Preescuela',
-        status: AttendanceStatus.PRESENT,
-        coordinatorRole: RoleType.PREESCUELA,
-        registeredAt: new Date(),
-      },
-      {
-        groupId: preescuela.id,
-        memberId: m2.id,
-        memberName: m2.name,
-        sessionName: '19/Oct Preescuela',
-        status: AttendanceStatus.ABSENT,
-        coordinatorRole: RoleType.PREESCUELA,
-        registeredAt: new Date(Date.now() - 3600000),
-      },
-    ],
-    skipDuplicates: true,
-  })
+  const existingAuditCount = await prisma.auditLog.count()
+  if (existingAuditCount === 0) {
+    await prisma.auditLog.createMany({
+      data: [
+        {
+          groupId: preescuela.id,
+          memberId: m1.id,
+          memberName: m1.name,
+          sessionName: '02/Nov Preescuela',
+          status: AttendanceStatus.PRESENT,
+          coordinatorRole: RoleType.PREESCUELA,
+          registeredAt: new Date(),
+        },
+        {
+          groupId: preescuela.id,
+          memberId: m2.id,
+          memberName: m2.name,
+          sessionName: '19/Oct Preescuela',
+          status: AttendanceStatus.ABSENT,
+          coordinatorRole: RoleType.PREESCUELA,
+          registeredAt: new Date(Date.now() - 3600000),
+        },
+      ],
+      skipDuplicates: true,
+    })
+  }
 
   console.log('✅ Base de datos inicializada correctamente con datos semilla.')
 }

@@ -1,26 +1,24 @@
 services:
   # ─────────────────────────────
-  #  Base de datos MySQL
+  #  Base de datos PostgreSQL
   # ─────────────────────────────
   db:
-    image: mysql:8.0
+    image: postgres:16-alpine
     container_name: mjvc_db
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mjvc_root_pass}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-mjvc_attendance}
-      MYSQL_USER: ${MYSQL_USER:-mjvc_user}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-mjvc_pass}
+      POSTGRES_USER: ${POSTGRES_USER:-mjvc_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mjvc_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-mjvc_attendance}
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-mjvc_root_pass}"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mjvc_user} -d ${POSTGRES_DB:-mjvc_attendance}"]
+      interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 30s
     networks:
       - mjvc_net
 
@@ -35,10 +33,10 @@ services:
     container_name: mjvc_migrate
     restart: "no"
     environment:
-      DATABASE_URL: mysql://${MYSQL_USER:-mjvc_user}:${MYSQL_PASSWORD:-mjvc_pass}@db:3306/${MYSQL_DATABASE:-mjvc_attendance}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mjvc_user}:${POSTGRES_PASSWORD:-mjvc_pass}@db:5432/${POSTGRES_DB:-mjvc_attendance}
     command: >
       sh -c "
-        npx prisma migrate deploy &&
+        npx prisma db push &&
         npx tsx prisma/seed.ts
       "
     depends_on:
@@ -55,13 +53,13 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        DATABASE_URL: mysql://${MYSQL_USER:-mjvc_user}:${MYSQL_PASSWORD:-mjvc_pass}@db:3306/${MYSQL_DATABASE:-mjvc_attendance}
+        DATABASE_URL: postgresql://${POSTGRES_USER:-mjvc_user}:${POSTGRES_PASSWORD:-mjvc_pass}@db:5432/${POSTGRES_DB:-mjvc_attendance}
     container_name: mjvc_app
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: mysql://${MYSQL_USER:-mjvc_user}:${MYSQL_PASSWORD:-mjvc_pass}@db:3306/${MYSQL_DATABASE:-mjvc_attendance}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mjvc_user}:${POSTGRES_PASSWORD:-mjvc_pass}@db:5432/${POSTGRES_DB:-mjvc_attendance}
       JWT_SECRET: ${JWT_SECRET:-mjvc_ea_jesus_super_secure_jwt_secret_key_2026}
       NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-MJVC EA's Jesús}
       NODE_ENV: production
@@ -74,7 +72,7 @@ services:
       - mjvc_net
 
 volumes:
-  mysql_data:
+  pg_data:
 
 networks:
   mjvc_net:
