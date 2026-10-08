@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { ChevronRight } from 'lucide-react'
+import { SummaryMetricCard } from './SummaryMetricCard'
 
 interface SummaryViewProps {
   onNavigate: (view: 'asistencia') => void
@@ -20,14 +21,10 @@ export function SummaryView({ onNavigate, metrics }: SummaryViewProps) {
   const sign = diff > 0 ? '+' : ''
   const trendText = `${sign}${diff.toFixed(1)}% respecto a la semana pasada`
 
-  // Reglas de color:
-  // - Si baja más del 10% (< -10%): Rojo (#7A1E2C)
-  // - Si baja menos de 10% (-10% <= diff < 0%): Color actual (#196E52)
-  // - Si se mantiene o sube (>= 0%): Verde que se viene manejando (#196E52)
   const getTrendColor = (val: number) => {
-    if (val < -10) return 'text-[#7A1E2C]' // Rojo (baja más del 10%)
-    if (val < 0) return 'text-[#196E52]'   // Color actual (baja menos del 10%)
-    return 'text-[#196E52]'                 // Verde que se viene manejando (se mantiene o sube)
+    if (val < -10) return 'text-[#7A1E2C]'
+    if (val < 0) return 'text-[#196E52]'
+    return 'text-[#196E52]'
   }
 
   const trendColor = getTrendColor(diff)
@@ -54,42 +51,44 @@ export function SummaryView({ onNavigate, metrics }: SummaryViewProps) {
           <div className="font-google-sans font-black text-[36px] text-[#DE9927] leading-none">
             {metrics.globalAttendanceRate}%
           </div>
-          <span className="font-manrope font-bold text-[10px] text-[#DE9927] mt-1 block">Óptimo</span>
+          <span className="font-manrope font-bold text-[10px] text-[#DE9927] mt-1 block">
+            Óptimo
+          </span>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3.5">
-        <div className="bg-[#FAF3E7] rounded-2xl p-4 border border-[#E5D5BC] shadow-sm flex flex-col justify-between min-h-[105px]">
-          <span className="font-manrope font-semibold text-[11px] text-[#5C6B7C]">Total Integrantes</span>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="font-google-sans font-black text-[24px] text-[#0D356A]">{metrics.totalMembers}</span>
-            <span className="bg-[#DDE7F5] text-[#0D356A] font-manrope font-bold text-[9px] px-2 py-0.5 rounded-full">Activos</span>
-          </div>
-        </div>
+        <SummaryMetricCard
+          label="Total Integrantes"
+          value={metrics.totalMembers}
+          badgeText="Activos"
+          valueColor="text-[#0D356A]"
+          badgeClassName="bg-[#DDE7F5] text-[#0D356A] font-manrope font-bold text-[9px] px-2 py-0.5 rounded-full"
+        />
 
-        <div className="bg-[#FAF3E7] rounded-2xl p-4 border border-[#E5D5BC] shadow-sm flex flex-col justify-between min-h-[105px]">
-          <span className="font-manrope font-semibold text-[11px] text-[#5C6B7C]">Presentes Hoy</span>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="font-google-sans font-black text-[24px] text-[#196E52]">{metrics.activePresent}</span>
-            <span className="text-[#196E52] font-manrope font-bold text-[9px]">Asistencia</span>
-          </div>
-        </div>
+        <SummaryMetricCard
+          label="Presentes Hoy"
+          value={metrics.activePresent}
+          badgeText="Asistencia"
+          valueColor="text-[#196E52]"
+          badgeClassName="text-[#196E52] font-manrope font-bold text-[9px]"
+        />
 
-        <div className="bg-[#FAF3E7] rounded-2xl p-4 border border-[#E5D5BC] shadow-sm flex flex-col justify-between min-h-[105px]">
-          <span className="font-manrope font-semibold text-[11px] text-[#5C6B7C]">Retardos</span>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="font-google-sans font-black text-[24px] text-[#C86A1D]">{metrics.activeLate}</span>
-            <span className="text-[#C86A1D] font-manrope font-bold text-[9px]">Atención</span>
-          </div>
-        </div>
+        <SummaryMetricCard
+          label="Retardos"
+          value={metrics.activeLate}
+          badgeText="Atención"
+          valueColor="text-[#C86A1D]"
+          badgeClassName="text-[#C86A1D] font-manrope font-bold text-[9px]"
+        />
 
-        <div className="bg-[#FAF3E7] rounded-2xl p-4 border border-[#E5D5BC] shadow-sm flex flex-col justify-between min-h-[105px]">
-          <span className="font-manrope font-semibold text-[11px] text-[#5C6B7C]">Faltas</span>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="font-google-sans font-black text-[24px] text-[#7A1E2C]">{metrics.activeAbsent}</span>
-            <span className="text-[#7A1E2C] font-manrope font-bold text-[9px]">Crítico</span>
-          </div>
-        </div>
+        <SummaryMetricCard
+          label="Faltas"
+          value={metrics.activeAbsent}
+          badgeText="Crítico"
+          valueColor="text-[#7A1E2C]"
+          badgeClassName="text-[#7A1E2C] font-manrope font-bold text-[9px]"
+        />
       </div>
 
       <div
