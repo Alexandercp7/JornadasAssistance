@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import {
   Star,
   Plus,
@@ -11,6 +11,7 @@ import { LoyaltyCardModal } from '@/components/export/LoyaltyCardModal'
 import { MemberModal } from './MemberModal'
 import { AddSessionModal } from './AddSessionModal'
 import { QrPassModal } from './QrPassModal'
+import { FloatingAttendanceToolbar } from './FloatingAttendanceToolbar'
 import { useAttendanceStore, MemberItem, SessionItem } from '@/store/useAttendanceStore'
 import { useAuthStore } from '@/store/useAuthStore'
 
@@ -32,13 +33,18 @@ export function AttendanceTable() {
   const currentGroupId =
     groupId || (activeRole === 'ESCUELA' ? 'grp_escuela' : 'grp_preescuela')
 
-  // Filtrar estrictamente sesiones y miembros pertenecientes a la coordinación activa
-  const groupSessions = sessions.filter(
-    (s) => !s.groupId || s.groupId === currentGroupId
-  )
-  const groupMembers = members.filter(
-    (m) => !m.groupId || m.groupId === currentGroupId
-  )
+  // Filtrar estrictamente sesiones y miembros pertenecientes a la coordinación activa (memoizado)
+  const groupSessions = useMemo(() => {
+    return sessions.filter(
+      (s) => !s.groupId || s.groupId === currentGroupId
+    )
+  }, [sessions, currentGroupId])
+
+  const groupMembers = useMemo(() => {
+    return members.filter(
+      (m) => !m.groupId || m.groupId === currentGroupId
+    )
+  }, [members, currentGroupId])
 
   // Estados de Modales
   const [selectedMemberForCard, setSelectedMemberForCard] = useState<MemberItem | null>(null)
@@ -48,14 +54,51 @@ export function AttendanceTable() {
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false)
   const [isSessionModalOpen, setIsSessionModalOpen] = useState(false)
 
-  // Referencia para auto-scroll del contenedor de la tabla
+  // Estado del Toolbar Flotante Contextual para la celda seleccionada
+  const [activeCellPopover, setActiveCellPopover] = useState<{
+    memberId: string
+    sessionId: string
+    memberName: string
+    sessionLabel: string
+    currentStatus: AttendanceStatus
+    anchorEl: HTMLElement
+  } | null>(null)
+
+  // Referencia para auto-scroll del contenedor de la tabla (solo en carga inicial o al agregar nueva sesión)
   const tableContainerRef = useRef<HTMLDivElement>(null)
+  const hasAutoScrolledRef = useRef(false)
+  const prevSessionCountRef = useRef(0)
 
   useEffect(() => {
-    if (tableContainerRef.current) {
-      tableContainerRef.current.scrollLeft = tableContainerRef.current.scrollWidth
+    if (tableContainerRef.current && groupSessions.length > 0) {
+      const isInitialLoad = !hasAutoScrolledRef.current
+      const isNewSessionAdded = prevSessionCountRef.current > 0 && groupSessions.length > prevSessionCountRef.current
+
+      if (isInitialLoad || isNewSessionAdded) {
+        tableContainerRef.current.scrollLeft = tableContainerRef.current.scrollWidth
+        hasAutoScrolledRef.current = true
+      }
+      prevSessionCountRef.current = groupSessions.length
     }
-  }, [groupSessions])
+  }, [groupSessions.length])
+
+  // Manejador de clic en un sello de asistencia: abre el toolbar contextual anclado a la celda
+  const handleStampClick = (
+    e: React.MouseEvent<HTMLButtonElement>,
+    member: MemberItem,
+    session: SessionItem,
+    currentStatus: AttendanceStatus
+  ) => {
+    e.stopPropagation()
+    setActiveCellPopover({
+      memberId: member.id,
+      sessionId: session.id,
+      memberName: member.name,
+      sessionLabel: session.label,
+      currentStatus,
+      anchorEl: e.currentTarget,
+    })
+  }
 
   // Manejador para guardar miembro (Crear o Editar)
   const handleSaveMember = (data: {
@@ -146,13 +189,13 @@ export function AttendanceTable() {
 
       {/* Contenedor de la Tabla estilo Mockup */}
       <div className="bg-[#FAF3E7] rounded-3xl border border-[#E5D5BC] shadow-sm overflow-hidden">
-        <div ref={tableContainerRef} className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-sm text-left whitespace-nowrap">
+        <div ref={tableContainerRef} className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-220px)] sm:max-h-[calc(100vh-240px)] custom-scrollbar">
+          <table className="w-full text-sm text-left whitespace-nowrap border-separate border-spacing-0">
 
-            {/* Cabecera Azul Marino */}
-            <thead className="bg-[#0D356A] text-white">
+            {/* Cabecera Azul Marino Fija (Sticky) */}
+            <thead className="bg-[#0D356A] text-white sticky top-0 z-30 shadow-xs">
               <tr>
-                <th className="px-4 py-3.5 text-[11px] font-manrope font-bold text-[#DE9927] uppercase tracking-wider sticky left-0 bg-[#0D356A] z-20 min-w-[200px]">
+                <th className="px-4 py-3.5 text-[11px] font-manrope font-bold text-[#DE9927] uppercase tracking-wider sticky left-0 top-0 bg-[#0D356A] z-40 min-w-[200px] border-b border-[#09264D]">
                   INTEGRANTE
                 </th>
 
@@ -166,7 +209,7 @@ export function AttendanceTable() {
                         setSessionToEdit(session)
                         setIsSessionModalOpen(true)
                       }}
-                      className="px-3 py-2.5 text-center min-w-[65px] group relative cursor-pointer hover:bg-white/15 transition-all select-none"
+                      className="px-3 py-2.5 text-center min-w-[65px] group relative cursor-pointer hover:bg-white/15 transition-all select-none sticky top-0 bg-[#0D356A] z-30 border-b border-[#09264D]"
                       title="Clic para configurar fecha o activar/desactivar retardo"
                     >
                       <div className="flex flex-col items-center justify-center leading-none">
@@ -186,7 +229,7 @@ export function AttendanceTable() {
                 })}
 
                 {/* Cabecera TOTAL: Oculta en celular (hidden) y mostrada desde tablet (sm:table-cell) */}
-                <th className="hidden sm:table-cell px-3 py-3 text-center text-xs font-bold text-[#DE9927] uppercase tracking-wider sticky right-0 bg-[#0D356A] z-20 min-w-[90px]">
+                <th className="hidden sm:table-cell px-3 py-3 text-center text-xs font-bold text-[#DE9927] uppercase tracking-wider sticky right-0 top-0 bg-[#0D356A] z-40 min-w-[90px] border-b border-[#09264D]">
                   TOTAL
                 </th>
               </tr>
@@ -214,9 +257,9 @@ export function AttendanceTable() {
                   presentCount + lateCount + lateJustifiedCount + absentCount + absentJustifiedCount
                 const score =
                   presentCount * 1 +
-                  lateCount * 0.5 +
-                  lateJustifiedCount * 0.75 +
-                  absentJustifiedCount * 0.25
+                  lateCount * 0.75 +
+                  lateJustifiedCount * 1 +
+                  absentJustifiedCount * 1
                 const percentage =
                   totalEvaluated > 0
                     ? Math.round((score / totalEvaluated) * 100)
@@ -231,7 +274,7 @@ export function AttendanceTable() {
                   >
                     <td
                       onClick={() => setSelectedMemberForCard(member)}
-                      className="px-4 py-3 sticky left-0 bg-[#FAF3E7] group-hover:bg-[#F8EFE2] z-10 border-r border-[#E5D5BC]/50 cursor-pointer"
+                      className="px-4 py-3 sticky left-0 bg-[#FAF3E7] group-hover:bg-[#F8EFE2] z-10 border-r border-b border-[#E5D5BC]/50 cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
 
@@ -273,13 +316,18 @@ export function AttendanceTable() {
                     {groupSessions.map((session) => {
                       const att = member.attendances?.find((a) => a.sessionId === session.id)
                       const currentStatus: AttendanceStatus = att ? att.status : 'EMPTY'
+                      const isCellActive =
+                        activeCellPopover?.memberId === member.id &&
+                        activeCellPopover?.sessionId === session.id
 
                       return (
-                        <td key={session.id} className="px-2 py-2.5 text-center">
+                        <td key={session.id} className="px-2 py-2.5 text-center border-b border-[#E5D5BC]/50">
                           <div className="flex justify-center items-center">
                             <InteractiveStamp
                               initialStatus={currentStatus}
                               size="md"
+                              isActive={isCellActive}
+                              onClick={(e) => handleStampClick(e, member, session, currentStatus)}
                               onStatusChange={(newStatus) => {
                                 markAttendance(member.id, session.id, newStatus, activeRole || 'PREESCUELA')
                               }}
@@ -290,7 +338,7 @@ export function AttendanceTable() {
                     })}
 
                     {/* Celda TOTAL: Oculta en celular (hidden) y mostrada desde tablet (sm:table-cell) */}
-                    <td className="hidden sm:table-cell px-3 py-3 text-center sticky right-0 bg-[#FAF3E7] group-hover:bg-[#F8EFE2] z-10 border-l border-[#E5D5BC]/50">
+                    <td className="hidden sm:table-cell px-3 py-3 text-center sticky right-0 bg-[#FAF3E7] group-hover:bg-[#F8EFE2] z-10 border-l border-b border-[#E5D5BC]/50">
                       <div className="flex flex-col items-center justify-center">
                         <span className="font-extrabold text-xs text-[#0D356A]">{percentage}%</span>
                         <div className="flex items-center gap-1 text-[9px] font-bold text-[#0D356A]/60">
@@ -360,6 +408,27 @@ export function AttendanceTable() {
         onClose={() => setSelectedMemberForQr(null)}
         member={selectedMemberForQr}
       />
+
+      {/* Barra de Herramientas Flotante Contextual para seleccionar opciones */}
+      {activeCellPopover && (
+        <FloatingAttendanceToolbar
+          isOpen={!!activeCellPopover}
+          onClose={() => setActiveCellPopover(null)}
+          currentStatus={activeCellPopover.currentStatus}
+          memberName={activeCellPopover.memberName}
+          sessionLabel={activeCellPopover.sessionLabel}
+          anchorEl={activeCellPopover.anchorEl}
+          onSelectStatus={(newStatus) => {
+            markAttendance(
+              activeCellPopover.memberId,
+              activeCellPopover.sessionId,
+              newStatus,
+              activeRole || 'PREESCUELA'
+            )
+            setActiveCellPopover(null)
+          }}
+        />
+      )}
 
     </div>
   )
