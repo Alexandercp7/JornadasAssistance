@@ -109,12 +109,12 @@ export async function GET(req: Request) {
       const totalEvaluated =
         presentCount + lateCount + lateJustifiedCount + absentCount + absentJustifiedCount
 
-      // Fórmula: presente=1pt, retardo=0.5pt, retardo_just=0.75pt, falta_just=0.25pt, falta=0pt
+      // Fórmula: presente=1pt, retardo=0.75pt, retardo_just=1pt, falta_just=1pt, falta=0pt
       const score =
         presentCount * 1 +
-        lateCount * 0.5 +
-        lateJustifiedCount * 0.75 +
-        absentJustifiedCount * 0.25
+        lateCount * 0.75 +
+        lateJustifiedCount * 1 +
+        absentJustifiedCount * 1
 
       const percentage = totalEvaluated > 0 ? Math.round((score / totalEvaluated) * 100) : 0
 

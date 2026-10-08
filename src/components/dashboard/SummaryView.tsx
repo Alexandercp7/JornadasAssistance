@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { TrendingUp, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 
 interface SummaryViewProps {
   onNavigate: (view: 'asistencia') => void
@@ -11,10 +11,27 @@ interface SummaryViewProps {
     activeLate: number
     activeAbsent: number
     globalAttendanceRate: string
+    weeklyDiff?: number
   }
 }
 
 export function SummaryView({ onNavigate, metrics }: SummaryViewProps) {
+  const diff = metrics.weeklyDiff ?? 0
+  const sign = diff > 0 ? '+' : ''
+  const trendText = `${sign}${diff.toFixed(1)}% respecto a la semana pasada`
+
+  // Reglas de color:
+  // - Si baja más del 10% (< -10%): Rojo (#7A1E2C)
+  // - Si baja menos de 10% (-10% <= diff < 0%): Color actual (#196E52)
+  // - Si se mantiene o sube (>= 0%): Verde que se viene manejando (#196E52)
+  const getTrendColor = (val: number) => {
+    if (val < -10) return 'text-[#7A1E2C]' // Rojo (baja más del 10%)
+    if (val < 0) return 'text-[#196E52]'   // Color actual (baja menos del 10%)
+    return 'text-[#196E52]'                 // Verde que se viene manejando (se mantiene o sube)
+  }
+
+  const trendColor = getTrendColor(diff)
+
   return (
     <div className="space-y-4 animate-in slide-in-from-left-4 duration-300">
       <div className="pt-1">
@@ -28,8 +45,8 @@ export function SummaryView({ onNavigate, metrics }: SummaryViewProps) {
           <span className="font-manrope font-bold text-[12px] text-[#5C6B7C] tracking-wider uppercase block">
             ASISTENCIA GLOBAL
           </span>
-          <div className="flex items-center gap-1.5 text-[#196E52] font-manrope font-normal text-[13px]">
-            <span>↑ +1.2% respecto a la semana pasada</span>
+          <div className={`flex items-center gap-1.5 font-manrope font-normal text-[13px] ${trendColor}`}>
+            <span>{trendText}</span>
           </div>
         </div>
 
