@@ -7,13 +7,17 @@ export type AttendanceStatus = 'EMPTY' | 'PRESENT' | 'LATE' | 'LATE_JUSTIFIED' |
 interface InteractiveStampProps {
   initialStatus?: AttendanceStatus
   onStatusChange?: (newStatus: AttendanceStatus, justification?: string) => void
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void
   size?: 'sm' | 'md' | 'lg'
+  isActive?: boolean
 }
 
 export const InteractiveStamp = memo(function InteractiveStamp({
   initialStatus = 'EMPTY',
   onStatusChange,
+  onClick,
   size = 'md',
+  isActive = false,
 }: InteractiveStampProps) {
   const status = initialStatus
 
@@ -23,6 +27,14 @@ export const InteractiveStamp = memo(function InteractiveStamp({
     const nextStatus = sequence[(currentIndex + 1) % sequence.length]
 
     if (onStatusChange) onStatusChange(nextStatus)
+  }
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (onClick) {
+      onClick(e)
+    } else {
+      cycleStatus()
+    }
   }
 
   const sizeClasses = {
@@ -43,8 +55,9 @@ export const InteractiveStamp = memo(function InteractiveStamp({
   return (
     <button
       type="button"
-      onClick={cycleStatus}
+      onClick={handleClick}
       className={`${sizeClasses} rounded-full flex items-center justify-center transition-all duration-100 outline-none select-none cursor-pointer active:scale-90 font-manrope font-extrabold text-[11px]
+        ${isActive ? 'ring-2 ring-[#DE9927] ring-offset-2 scale-110 shadow-md z-10' : ''}
         ${status === 'EMPTY' ? 'bg-[#FAF2E5] border-2 border-[#E5D5BC] hover:border-[#DE9927]/60' : ''}
         ${status === 'PRESENT' ? 'bg-[#1F6B5C] border-2 border-[#1F6B5C] text-[#F3E7C8] shadow-sm' : ''}
         ${status === 'LATE' ? 'bg-[#D87532] border-2 border-[#D87532] text-[#F3E7C8] shadow-sm' : ''}
