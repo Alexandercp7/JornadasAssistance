@@ -35,7 +35,7 @@ export function QrPassModal({ isOpen, onClose, member }: QrPassModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-card text-card-foreground w-full max-w-sm rounded-3xl shadow-2xl border border-border overflow-hidden flex flex-col items-center">
-        
+
         {/* Barra superior */}
         <div className="w-full flex items-center justify-between px-6 py-4 border-b border-border bg-primary/5">
           <span className="text-sm font-bold text-primary flex items-center gap-2">
@@ -70,11 +70,6 @@ export function QrPassModal({ isOpen, onClose, member }: QrPassModalProps) {
                 includeMargin={false}
                 fgColor="#0E387A"
               />
-            </div>
-
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-accent-gold z-10 bg-primary-foreground/10 px-3 py-1 rounded-full border border-accent-gold/30">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Token: {member.qrToken.slice(0, 14)}...</span>
             </div>
 
             <p className="text-[9px] text-primary-foreground/50 z-10">
