@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import Image from 'next/image'
 import { toPng } from 'html-to-image'
-import { X, Download, Star, Check, Sparkles, User, Edit2 } from 'lucide-react'
+import { X, Download, Check, Sparkles, User, Edit2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MemberItem, SessionItem } from '@/store/useAttendanceStore'
 
@@ -36,9 +36,13 @@ export function LoyaltyCardModal({
     if (cardRef.current) {
       try {
         setIsExporting(true)
+        if (typeof document !== 'undefined' && document.fonts) {
+          await document.fonts.ready
+        }
         const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3, skipFonts: true })
         const link = document.createElement('a')
-        link.download = `LoyaltyCard_${member.name.replace(/\s+/g, '_')}.png`
+        const formattedName = member.name.trim().replace(/\s+/g, ' ').replace(/[\\/:*?"<>|]/g, '')
+        link.download = `${formattedName} Asistencia.png`
         link.href = dataUrl
         link.click()
       } catch (err) {
@@ -97,11 +101,13 @@ export function LoyaltyCardModal({
             <div className="absolute -left-12 -top-12 w-32 h-32 bg-white/5 rounded-full blur-xl pointer-events-none" />
 
             {/* Cabecera Oficial */}
-            <div className="flex items-center justify-between border-b border-primary-foreground/15 pb-3 z-10">
-              <div>
-                <h3 className="text-lg font-black tracking-tight text-accent-gold">MJVC EA's Jesús</h3>
-                <p className="text-[10px] text-primary-foreground/80 font-medium">
-                  {member.isAuxiliar ? 'Auxiliares' : member.roleSubtitle}
+            <div className="flex items-center justify-between border-b border-primary-foreground/15 pb-3 z-10 gap-2">
+              <div className="flex flex-col min-w-0">
+                <h3 className="text-[17px] font-black tracking-tight text-accent-gold whitespace-nowrap leading-tight">
+                  MJVC EA's Jesús
+                </h3>
+                <p className="text-[10px] text-primary-foreground/80 font-medium leading-tight mt-0.5">
+                  {groupTitle}
                 </p>
               </div>
 
@@ -120,9 +126,8 @@ export function LoyaltyCardModal({
               <div
                 onClick={onEditMember}
                 title="Haga clic para editar"
-                className={`w-16 h-16 rounded-full border-2 border-accent-gold overflow-hidden bg-primary-foreground/10 relative shadow-inner shrink-0 flex items-center justify-center ${
-                  onEditMember ? 'cursor-pointer hover:scale-105 hover:border-white transition-all group/avatar' : ''
-                }`}
+                className={`w-16 h-16 rounded-full border-2 border-accent-gold overflow-hidden bg-primary-foreground/10 relative shadow-inner shrink-0 flex items-center justify-center ${onEditMember ? 'cursor-pointer hover:scale-105 hover:border-white transition-all group/avatar' : ''
+                  }`}
               >
                 {member.avatarUrl ? (
                   <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" />
@@ -137,11 +142,6 @@ export function LoyaltyCardModal({
               </div>
               <div className="space-y-1">
                 <h4 className="font-bold text-lg text-primary-foreground leading-snug">{member.name}</h4>
-                {member.isAuxiliar && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-black bg-accent-gold text-primary px-2.5 py-0.5 rounded-full shadow-md">
-                    <Star className="w-3 h-3 fill-primary text-primary" /> AUXILIARES
-                  </span>
-                )}
               </div>
             </div>
 
@@ -153,20 +153,20 @@ export function LoyaltyCardModal({
               </div>
 
               <div className="grid grid-cols-4 gap-2">
-                {paddedStamps.slice(0, 8).map((stamp, idx) => (
+                {stamps.slice(0, 8).map((stamp, idx) => (
                   <div
                     key={idx}
                     className={`aspect-square rounded-xl border flex flex-col items-center justify-center relative shadow-sm transition-all ${stamp.status === 'PRESENT'
-                        ? 'bg-accent-gold border-accent-gold text-primary shadow-[0_0_12px_rgba(227,163,54,0.4)]'
-                        : stamp.status === 'LATE'
-                          ? 'bg-status-late border-status-late text-white'
-                          : stamp.status === 'LATE_JUSTIFIED'
-                            ? 'bg-status-late-justified border-status-late-justified text-white'
-                            : stamp.status === 'ABSENT'
-                              ? 'bg-status-absent border-status-absent text-white'
-                              : stamp.status === 'ABSENT_JUSTIFIED'
-                                ? 'bg-status-absent-justified border-status-absent-justified text-white'
-                                : 'bg-primary-foreground/5 border-primary-foreground/20 text-primary-foreground/30'
+                      ? 'bg-accent-gold border-accent-gold text-primary shadow-[0_0_12px_rgba(227,163,54,0.4)]'
+                      : stamp.status === 'LATE'
+                        ? 'bg-status-late border-status-late text-white'
+                        : stamp.status === 'LATE_JUSTIFIED'
+                          ? 'bg-status-late-justified border-status-late-justified text-white'
+                          : stamp.status === 'ABSENT'
+                            ? 'bg-status-absent border-status-absent text-white'
+                            : stamp.status === 'ABSENT_JUSTIFIED'
+                              ? 'bg-status-absent-justified border-status-absent-justified text-white'
+                              : 'bg-primary-foreground/5 border-primary-foreground/20 text-primary-foreground/30'
                       }`}
                   >
                     <span className="text-[8px] font-bold opacity-80 mb-0.5">{stamp.sessionLabel}</span>
@@ -183,9 +183,7 @@ export function LoyaltyCardModal({
 
             {/* Pie de Validación Oficial */}
             <div className="pt-3 border-t border-primary-foreground/15 text-center z-10">
-              <p className="text-[8px] text-primary-foreground/60 leading-tight">
-                Validado por: Coordinación {groupTitle} — MJVC EA's Jesús
-              </p>
+
             </div>
 
           </div>
