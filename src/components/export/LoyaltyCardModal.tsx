@@ -94,7 +94,10 @@ export function LoyaltyCardModal({
           <div
             ref={cardRef}
             className="w-full max-w-[340px] bg-primary text-primary-foreground rounded-3xl p-6 shadow-2xl border-2 border-accent-gold flex flex-col justify-between relative overflow-hidden"
-            style={{ aspectRatio: '3/4' }}
+            style={{
+              aspectRatio: '3/4',
+              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            }}
           >
             {/* Elemento de fondo con resplandor dorado */}
             <div className="absolute -right-12 -bottom-12 w-44 h-44 bg-accent-gold/15 rounded-full blur-2xl pointer-events-none" />
@@ -156,7 +159,7 @@ export function LoyaltyCardModal({
                 {stamps.slice(0, 8).map((stamp, idx) => (
                   <div
                     key={idx}
-                    className={`aspect-square rounded-xl border flex flex-col items-center justify-center relative shadow-sm transition-all ${stamp.status === 'PRESENT'
+                    className={`aspect-square rounded-xl border flex flex-col items-center justify-center p-1 relative shadow-sm transition-all gap-1 ${stamp.status === 'PRESENT'
                       ? 'bg-accent-gold border-accent-gold text-primary shadow-[0_0_12px_rgba(227,163,54,0.4)]'
                       : stamp.status === 'LATE'
                         ? 'bg-status-late border-status-late text-white'
@@ -169,21 +172,20 @@ export function LoyaltyCardModal({
                               : 'bg-primary-foreground/5 border-primary-foreground/20 text-primary-foreground/30'
                       }`}
                   >
-                    <span className="text-[8px] font-bold opacity-80 mb-0.5">{stamp.sessionLabel}</span>
-                    {stamp.status === 'PRESENT' && <Check className="w-4 h-4 stroke-[3]" />}
-                    {stamp.status === 'LATE' && <span className="font-bold text-xs">R</span>}
-                    {stamp.status === 'LATE_JUSTIFIED' && <span className="font-bold text-[10px]">RJ</span>}
-                    {stamp.status === 'ABSENT' && <span className="font-bold text-xs">✗</span>}
-                    {stamp.status === 'ABSENT_JUSTIFIED' && <span className="font-bold text-[10px]">FJ</span>}
-                    {stamp.status === 'EMPTY' && <div className="w-2 h-2 rounded-full border border-current" />}
+                    <span className="text-[8.5px] font-bold opacity-90 leading-none whitespace-nowrap select-none tracking-tight">
+                      {stamp.sessionLabel}
+                    </span>
+                    <div className="flex items-center justify-center shrink-0 w-4 h-4">
+                      {stamp.status === 'PRESENT' && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      {stamp.status === 'LATE' && <span className="font-bold text-xs leading-none">R</span>}
+                      {stamp.status === 'LATE_JUSTIFIED' && <span className="font-bold text-[10px] leading-none">RJ</span>}
+                      {stamp.status === 'ABSENT' && <span className="font-bold text-xs leading-none">✗</span>}
+                      {stamp.status === 'ABSENT_JUSTIFIED' && <span className="font-bold text-[10px] leading-none">FJ</span>}
+                      {stamp.status === 'EMPTY' && <div className="w-2 h-2 rounded-full border border-current" />}
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Pie de Validación Oficial */}
-            <div className="pt-3 border-t border-primary-foreground/15 text-center z-10">
-
             </div>
 
           </div>
