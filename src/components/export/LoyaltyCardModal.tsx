@@ -1,7 +1,6 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import Image from 'next/image'
 import { toPng } from 'html-to-image'
 import { X, Download, Check, Sparkles, User, Edit2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -118,9 +117,13 @@ export function LoyaltyCardModal({
               <div
                 onClick={onOpenQr}
                 title="Generar Pase QR"
-                className="w-10 h-10 relative rounded-full border-2 border-accent-gold bg-primary-foreground p-0.5 shadow-md shrink-0 cursor-pointer hover:scale-105 transition-transform active:scale-95"
+                className="w-10 h-10 rounded-full border-2 border-accent-gold bg-primary-foreground overflow-hidden shadow-md shrink-0 cursor-pointer hover:scale-105 transition-transform active:scale-95 flex items-center justify-center"
               >
-                <Image src="/logo.png" alt="Logo MJVC" fill sizes="40px" className="object-cover rounded-full" />
+                <img
+                  src="/logo.png"
+                  alt="Logo MJVC"
+                  className="w-full h-full object-cover rounded-full block"
+                />
               </div>
             </div>
 
