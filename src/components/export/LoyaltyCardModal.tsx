@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { toPng } from 'html-to-image'
-import { X, Download, Check, Sparkles, User, Edit2 } from 'lucide-react'
+import { X, Download, Check, Sparkles, User, Edit2, Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MemberItem, SessionItem } from '@/store/useAttendanceStore'
 
@@ -14,6 +14,14 @@ interface LoyaltyCardModalProps {
   groupTitle?: string
   onOpenQr?: () => void
   onEditMember?: () => void
+}
+
+// Función auxiliar para exportar a PNG de alta definición
+async function generateCardPng(cardElement: HTMLDivElement): Promise<string> {
+  if (typeof document !== 'undefined' && document.fonts) {
+    await document.fonts.ready
+  }
+  return await toPng(cardElement, { cacheBust: true, pixelRatio: 3, skipFonts: true })
 }
 
 export function LoyaltyCardModal({
@@ -30,25 +38,55 @@ export function LoyaltyCardModal({
 
   if (!isOpen || !member) return null
 
-  // Función para exportar la tarjeta física digitalizada a PNG de alta definición
+  // Función para descargar la imagen directamente
   const handleDownloadImage = async () => {
-    if (cardRef.current) {
-      try {
-        setIsExporting(true)
-        if (typeof document !== 'undefined' && document.fonts) {
-          await document.fonts.ready
-        }
-        const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3, skipFonts: true })
+    if (!cardRef.current) return
+    try {
+      setIsExporting(true)
+      const dataUrl = await generateCardPng(cardRef.current)
+      const link = document.createElement('a')
+      const formattedName = member.name.trim().replace(/\s+/g, ' ').replace(/[\\/:*?"<>|]/g, '')
+      link.download = `${formattedName} Asistencia.png`
+      link.href = dataUrl
+      link.click()
+    } catch (err) {
+      console.error('Error al generar la imagen de la tarjeta:', err)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  // Compartir exclusivamente la imagen de la tarjeta por WhatsApp
+  const handleShareWhatsApp = async () => {
+    if (!cardRef.current) return
+    try {
+      setIsExporting(true)
+      const dataUrl = await generateCardPng(cardRef.current)
+      const formattedName = member.name.trim().replace(/\s+/g, ' ').replace(/[\\/:*?"<>|]/g, '')
+      const fileName = `${formattedName} Asistencia.png`
+
+      const res = await fetch(dataUrl)
+      const blob = await res.blob()
+      const file = new File([blob], fileName, { type: 'image/png' })
+
+      // Web Share API con archivo de imagen
+      if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+        })
+      } else {
+        // Fallback para navegadores de escritorio: descarga directa
         const link = document.createElement('a')
-        const formattedName = member.name.trim().replace(/\s+/g, ' ').replace(/[\\/:*?"<>|]/g, '')
-        link.download = `${formattedName} Asistencia.png`
+        link.download = fileName
         link.href = dataUrl
         link.click()
-      } catch (err) {
-        console.error('Error al generar la imagen de la tarjeta:', err)
-      } finally {
-        setIsExporting(false)
       }
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') {
+        console.error('Error al compartir por WhatsApp:', err)
+      }
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -117,12 +155,12 @@ export function LoyaltyCardModal({
               <div
                 onClick={onOpenQr}
                 title="Generar Pase QR"
-                className="w-10 h-10 rounded-full border-2 border-accent-gold bg-primary-foreground overflow-hidden shadow-md shrink-0 cursor-pointer hover:scale-105 transition-transform active:scale-95 flex items-center justify-center"
+                className="w-10 h-10 rounded-full border-2 border-accent-gold bg-primary overflow-hidden shadow-md shrink-0 cursor-pointer hover:scale-105 transition-transform active:scale-95 flex items-center justify-center"
               >
                 <img
                   src="/logo.png"
                   alt="Logo MJVC"
-                  className="w-full h-full object-cover rounded-full block"
+                  className="w-full h-full object-cover scale-110 block"
                 />
               </div>
             </div>
@@ -193,18 +231,28 @@ export function LoyaltyCardModal({
 
           </div>
 
-          {/* Botón para Descargar PNG e Instrucciones QR */}
-          <div className="w-full max-w-[340px] pt-2">
+          {/* Botones de Acción: Enviar por WhatsApp y Descargar PNG */}
+          <div className="w-full max-w-[340px] pt-1 space-y-2">
+            <Button
+              onClick={handleShareWhatsApp}
+              disabled={isExporting}
+              className="w-full bg-[#0D356A] hover:bg-[#09264D] text-white font-bold shadow-md gap-2 h-11 text-sm rounded-2xl transition-all cursor-pointer active:scale-[0.98]"
+            >
+              <Share2 className="w-4 h-4 text-[#DE9927]" />
+              {isExporting ? 'Preparando tarjeta...' : 'Enviar por WhatsApp'}
+            </Button>
+
             <Button
               onClick={handleDownloadImage}
               disabled={isExporting}
-              className="w-full bg-accent-gold text-primary hover:bg-accent-gold/90 font-bold shadow-md gap-2"
+              className="w-full bg-[#DE9927] hover:bg-[#C8841B] text-white font-bold shadow-xs gap-2 h-10 text-xs rounded-xl cursor-pointer transition-all active:scale-[0.98]"
             >
-              <Download className="w-4 h-4" />
-              {isExporting ? 'Generando imagen...' : 'Descargar Tarjeta (PNG)'}
+              <Download className="w-3.5 h-3.5" />
+              {isExporting ? 'Generando...' : 'Descargar Tarjeta (PNG)'}
             </Button>
-            <p className="text-[11px] text-center text-primary/60 mt-3 font-medium">
-              Toque el logotipo superior para generar su Pase QR. Guarde esta tarjeta para uso sin conexión.
+
+            <p className="text-[11px] text-center text-primary/60 pt-0.5 font-medium leading-relaxed">
+              Toque el logotipo superior para generar su Pase QR.
             </p>
           </div>
 
