@@ -5,42 +5,42 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🌱 Iniciando carga de datos iniciales (Seed)...')
 
-  // // 1. Grupos (Preescuela, Escuela y Super Administrador)
-  // await prisma.group.upsert({
-  //   where: { slug: RoleType.PREESCUELA },
-  //   update: { name: 'Coordinación Preescuela', customTitle: 'Preescuela', pin: '1234' },
-  //   create: {
-  //     id: 'grp_preescuela',
-  //     slug: RoleType.PREESCUELA,
-  //     name: 'Coordinación Preescuela',
-  //     customTitle: 'Preescuela',
-  //     pin: '1234',
-  //   },
-  // })
+  // 1. Grupos (Preescuela, Escuela y Super Administrador)
+  await prisma.group.upsert({
+    where: { slug: RoleType.PREESCUELA },
+    update: { name: 'Coordinación Preescuela', customTitle: 'Preescuela', pin: '1234' },
+    create: {
+      id: 'grp_preescuela',
+      slug: RoleType.PREESCUELA,
+      name: 'Coordinación Preescuela',
+      customTitle: 'Preescuela',
+      pin: '1234',
+    },
+  })
 
-  // const escuela = await prisma.group.upsert({
-  //   where: { slug: RoleType.ESCUELA },
-  //   update: { name: 'Coordinación Escuela', customTitle: 'Escuela', pin: '5678' },
-  //   create: {
-  //     id: 'grp_escuela',
-  //     slug: RoleType.ESCUELA,
-  //     name: 'Coordinación Escuela',
-  //     customTitle: 'Escuela',
-  //     pin: '5678',
-  //   },
-  // })
+  const escuela = await prisma.group.upsert({
+    where: { slug: RoleType.ESCUELA },
+    update: { name: 'Coordinación Escuela', customTitle: 'Escuela', pin: '5678' },
+    create: {
+      id: 'grp_escuela',
+      slug: RoleType.ESCUELA,
+      name: 'Coordinación Escuela',
+      customTitle: 'Escuela',
+      pin: '5678',
+    },
+  })
 
-  // await prisma.group.upsert({
-  //   where: { slug: RoleType.SUPERADMIN },
-  //   update: { name: 'Super Administrador', customTitle: 'Super Admin MJVC', pin: '9999' },
-  //   create: {
-  //     id: 'grp_superadmin',
-  //     slug: RoleType.SUPERADMIN,
-  //     name: 'Super Administrador',
-  //     customTitle: 'Super Admin MJVC',
-  //     pin: '9999',
-  //   },
-  // })
+  await prisma.group.upsert({
+    where: { slug: RoleType.SUPERADMIN },
+    update: { name: 'Super Administrador', customTitle: 'Super Admin MJVC', pin: '9999' },
+    create: {
+      id: 'grp_superadmin',
+      slug: RoleType.SUPERADMIN,
+      name: 'Super Administrador',
+      customTitle: 'Super Admin MJVC',
+      pin: '9999',
+    },
+  })
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 2. COORDINACIÓN ESCUELA - DATOS REALES DE AUXILIARES Y ASISTENCIAS
