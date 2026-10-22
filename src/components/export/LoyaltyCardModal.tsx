@@ -155,12 +155,12 @@ export function LoyaltyCardModal({
               <div
                 onClick={onOpenQr}
                 title="Generar Pase QR"
-                className="w-10 h-10 rounded-full border-2 border-accent-gold bg-primary overflow-hidden shadow-md shrink-0 cursor-pointer hover:scale-105 transition-transform active:scale-95 flex items-center justify-center"
+                className="w-10 h-10 rounded-full overflow-hidden shadow-md shrink-0 cursor-pointer hover:scale-105 transition-transform active:scale-95 flex items-center justify-center"
               >
                 <img
                   src="/logo.png"
                   alt="Logo MJVC"
-                  className="w-full h-full object-cover scale-110 block"
+                  className="w-full h-full object-cover scale-[1.08] block"
                 />
               </div>
             </div>
