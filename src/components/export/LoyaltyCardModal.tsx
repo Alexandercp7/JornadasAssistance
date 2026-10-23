@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { toPng } from 'html-to-image'
+import { QRCodeSVG } from 'qrcode.react'
 import { X, Download, Check, Sparkles, User, Edit2, Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MemberItem, SessionItem } from '@/store/useAttendanceStore'
@@ -34,6 +35,7 @@ export function LoyaltyCardModal({
   onEditMember,
 }: LoyaltyCardModalProps) {
   const cardRef = useRef<HTMLDivElement>(null)
+  const qrPassRef = useRef<HTMLDivElement>(null)
   const [isExporting, setIsExporting] = useState(false)
 
   if (!isOpen || !member) return null
@@ -56,30 +58,73 @@ export function LoyaltyCardModal({
     }
   }
 
-  // Compartir exclusivamente la imagen de la tarjeta por WhatsApp
+  // Compartir la tarjeta de asistencia y el pase QR por WhatsApp
   const handleShareWhatsApp = async () => {
     if (!cardRef.current) return
     try {
       setIsExporting(true)
-      const dataUrl = await generateCardPng(cardRef.current)
       const formattedName = member.name.trim().replace(/\s+/g, ' ').replace(/[\\/:*?"<>|]/g, '')
-      const fileName = `${formattedName} Asistencia.png`
+      const cardFileName = `${formattedName} Asistencia.png`
+      const qrFileName = `Pase_QR_${formattedName.replace(/\s+/g, '_')}.png`
 
-      const res = await fetch(dataUrl)
-      const blob = await res.blob()
-      const file = new File([blob], fileName, { type: 'image/png' })
+      // 1. Generar PNG de la tarjeta de asistencia
+      const cardDataUrl = await generateCardPng(cardRef.current)
+      const cardRes = await fetch(cardDataUrl)
+      const cardBlob = await cardRes.blob()
+      const cardFile = new File([cardBlob], cardFileName, { type: 'image/png' })
 
-      // Web Share API con archivo de imagen
-      if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-        })
-      } else {
-        // Fallback para navegadores de escritorio: descarga directa
-        const link = document.createElement('a')
-        link.download = fileName
-        link.href = dataUrl
-        link.click()
+      const filesToShare: File[] = [cardFile]
+      let qrDataUrl: string | null = null
+
+      // 2. Generar PNG del pase QR si está disponible
+      if (qrPassRef.current && member.qrToken) {
+        try {
+          qrDataUrl = await generateCardPng(qrPassRef.current)
+          const qrRes = await fetch(qrDataUrl)
+          const qrBlob = await qrRes.blob()
+          const qrFile = new File([qrBlob], qrFileName, { type: 'image/png' })
+          filesToShare.push(qrFile)
+        } catch (qrErr) {
+          console.error('Error al generar la imagen del pase QR:', qrErr)
+        }
+      }
+
+      // 3. Web Share API (WhatsApp y apps compatibles en móviles)
+      if (typeof navigator !== 'undefined' && navigator.canShare) {
+        if (navigator.canShare({ files: filesToShare })) {
+          await navigator.share({
+            files: filesToShare,
+            title: `${member.name} - Asistencia y Pase QR`,
+          })
+          return
+        } else if (navigator.canShare({ files: [cardFile] })) {
+          await navigator.share({
+            files: [cardFile],
+            title: `${member.name} - Asistencia`,
+          })
+          if (qrDataUrl) {
+            const link = document.createElement('a')
+            link.download = qrFileName
+            link.href = qrDataUrl
+            link.click()
+          }
+          return
+        }
+      }
+
+      // 4. Fallback para navegadores de escritorio: descarga directa de ambos archivos
+      const linkCard = document.createElement('a')
+      linkCard.download = cardFileName
+      linkCard.href = cardDataUrl
+      linkCard.click()
+
+      if (qrDataUrl) {
+        setTimeout(() => {
+          const linkQr = document.createElement('a')
+          linkQr.download = qrFileName
+          linkQr.href = qrDataUrl
+          linkQr.click()
+        }, 300)
       }
     } catch (err) {
       if ((err as Error)?.name !== 'AbortError') {
@@ -239,7 +284,7 @@ export function LoyaltyCardModal({
               className="w-full bg-[#0D356A] hover:bg-[#09264D] text-white font-bold shadow-md gap-2 h-11 text-sm rounded-2xl transition-all cursor-pointer active:scale-[0.98]"
             >
               <Share2 className="w-4 h-4 text-[#DE9927]" />
-              {isExporting ? 'Preparando tarjeta...' : 'Enviar por WhatsApp'}
+              {isExporting ? 'Preparando tarjeta y QR...' : 'Enviar por WhatsApp'}
             </Button>
 
             <Button
@@ -252,10 +297,61 @@ export function LoyaltyCardModal({
             </Button>
 
             <p className="text-[11px] text-center text-primary/60 pt-0.5 font-medium leading-relaxed">
-              Toque el logotipo superior para generar su Pase QR.
+              Al enviar por WhatsApp se comparten la tarjeta de sellos y el pase QR.
             </p>
           </div>
 
+        </div>
+
+        {/* Contenedor fuera de pantalla para renderizar y exportar el Pase QR */}
+        <div
+          style={{
+            position: 'fixed',
+            left: '-9999px',
+            top: '0',
+            width: '320px',
+            pointerEvents: 'none',
+            zIndex: -50,
+          }}
+          aria-hidden="true"
+        >
+          <div
+            ref={qrPassRef}
+            className="w-[320px] bg-primary text-primary-foreground rounded-2xl p-6 shadow-xl border-2 border-accent-gold flex flex-col items-center text-center space-y-4 relative overflow-hidden"
+            style={{
+              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            }}
+          >
+            {/* Fondo decorativo */}
+            <div className="absolute -right-8 -top-8 w-28 h-28 bg-accent-gold/20 rounded-full blur-xl pointer-events-none" />
+
+            <div className="space-y-1 z-10">
+              <span className="text-[10px] font-black tracking-widest text-accent-gold uppercase">
+                MJVC EA's Jesús
+              </span>
+              <h4 className="text-lg font-bold text-primary-foreground leading-tight">
+                {member.name}
+              </h4>
+              <p className="text-xs text-primary-foreground/70">
+                {member.isAuxiliar ? 'Auxiliares' : (groupTitle || member.roleSubtitle)}
+              </p>
+            </div>
+
+            {/* Código QR */}
+            <div className="p-4 bg-white rounded-2xl shadow-inner border-2 border-accent-gold/30 z-10">
+              <QRCodeSVG
+                value={member.qrToken}
+                size={180}
+                level="H"
+                includeMargin={false}
+                fgColor="#0E387A"
+              />
+            </div>
+
+            <p className="text-[9px] text-primary-foreground/50 z-10">
+              Presenta este código para registrar tu llegada.
+            </p>
+          </div>
         </div>
 
       </div>
